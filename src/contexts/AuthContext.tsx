@@ -102,19 +102,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     console.log('👤 loadUserProfile: Loading profile for user:', userId);
     
     try {
-      // Create a timeout promise to prevent hanging
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Profile loading timeout')), 10000); // 10 second timeout
-      });
-
-      // Race between the actual query and the timeout
-      const queryPromise = supabase
+      const { data, error } = await supabase
         .from('users')
         .select('*')
         .eq('id', userId)
         .single();
-
-      const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
 
       console.log('📊 loadUserProfile: Query result', { 
         profileFound: !!data, 
