@@ -56,8 +56,97 @@ export function PublicCVViewPage() {
     }
   };
 
+  const generateCVContent = (cv: any) => {
+    let content = `${cv.title}\n${'='.repeat(cv.title.length)}\n\n`;
+    
+    // Add personal info from sections
+    const personalSection = cv.sections?.find((s: any) => s.section_type === 'personal_info');
+    if (personalSection?.content) {
+      content += `${personalSection.content.fullName || 'Name'}\n`;
+      if (personalSection.content.title) content += `${personalSection.content.title}\n`;
+      if (personalSection.content.email) content += `Email: ${personalSection.content.email}\n`;
+      if (personalSection.content.phone) content += `Phone: ${personalSection.content.phone}\n`;
+      if (personalSection.content.location) content += `Location: ${personalSection.content.location}\n`;
+      content += '\n';
+    }
+
+    // Add summary
+    const summarySection = cv.sections?.find((s: any) => s.section_type === 'summary');
+    if (summarySection?.content?.summary) {
+      content += `PROFESSIONAL SUMMARY\n${'-'.repeat(20)}\n${summarySection.content.summary}\n\n`;
+    }
+
+    // Add experience
+    if (cv.experience && cv.experience.length > 0) {
+      content += `EXPERIENCE\n${'-'.repeat(10)}\n`;
+      cv.experience.forEach((exp: any) => {
+        content += `${exp.position} at ${exp.company}\n`;
+        if (exp.location) content += `Location: ${exp.location}\n`;
+        if (exp.start_date) {
+          content += `Duration: ${exp.start_date}`;
+          if (exp.end_date) content += ` - ${exp.end_date}`;
+          else if (exp.is_current) content += ` - Present`;
+          content += '\n';
+        }
+        if (exp.description) content += `${exp.description}\n`;
+        content += '\n';
+      });
+    }
+
+    // Add education
+    if (cv.education && cv.education.length > 0) {
+      content += `EDUCATION\n${'-'.repeat(9)}\n`;
+      cv.education.forEach((edu: any) => {
+        content += `${edu.degree}`;
+        if (edu.field_of_study) content += ` in ${edu.field_of_study}`;
+        content += `\n${edu.institution}\n`;
+        if (edu.start_date) {
+          content += `${edu.start_date}`;
+          if (edu.end_date) content += ` - ${edu.end_date}`;
+          else if (edu.is_current) content += ` - Present`;
+          content += '\n';
+        }
+        if (edu.gpa) content += `GPA: ${edu.gpa}\n`;
+        content += '\n';
+      });
+    }
+
+    // Add skills
+    if (cv.skills && cv.skills.length > 0) {
+      content += `SKILLS\n${'-'.repeat(6)}\n`;
+      const skillsByCategory = cv.skills.reduce((acc: any, skill: any) => {
+        const category = skill.category || 'General';
+        if (!acc[category]) acc[category] = [];
+        acc[category].push(skill.name);
+        return acc;
+      }, {});
+
+      Object.entries(skillsByCategory).forEach(([category, skills]: [string, any]) => {
+        content += `${category}: ${skills.join(', ')}\n`;
+      });
+      content += '\n';
+    }
+
+    // Add projects
+    if (cv.projects && cv.projects.length > 0) {
+      content += `PROJECTS\n${'-'.repeat(8)}\n`;
+      cv.projects.forEach((project: any) => {
+        content += `${project.title}\n`;
+        if (project.description) content += `${project.description}\n`;
+        if (project.technologies && project.technologies.length > 0) {
+          content += `Technologies: ${project.technologies.join(', ')}\n`;
+        }
+        if (project.project_url) content += `URL: ${project.project_url}\n`;
+        if (project.github_url) content += `GitHub: ${project.github_url}\n`;
+        content += '\n';
+      });
+    }
+
+    return content;
+  };
+
   const handleDownload = async () => {
-    if (!accessToken || !linkInfo?.allowDownload) return;
+    if (!accessToken || !linkInfo?.allow_download) return;
 
     try {
       setIsDownloading(true);
@@ -65,12 +154,9 @@ export function PublicCVViewPage() {
       // Log the download
       await syndicationService.logEphemeralDownload(accessToken);
       
-      // In a real implementation, this would generate and download a PDF
-      console.log('Downloading CV as PDF...');
-      
-      // Placeholder: Create a simple text file for demonstration
-      const cvText = `CV: ${cv.title}\n\nThis is a placeholder for the actual PDF download functionality.`;
-      const blob = new Blob([cvText], { type: 'text/plain' });
+      // Generate and download CV content
+      const cvContent = generateCVContent(cv);
+      const blob = new Blob([cvContent], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -188,21 +274,21 @@ export function PublicCVViewPage() {
             </div>
             
             <div className="flex items-center space-x-3">
-              {linkInfo?.allowDownload && (
+              {linkInfo?.allow_download && (
                 <Button
                   onClick={handleDownload}
                   isLoading={isDownloading}
                   variant="outline"
                 >
                   <Download className="h-4 w-4 mr-2" />
-                  Download PDF
+                  Download
                 </Button>
               )}
               
               <div className="text-sm text-gray-500">
-                {linkInfo?.maxViews && (
+                {linkInfo?.max_views && (
                   <span>
-                    {linkInfo.currentViews} / {linkInfo.maxViews} views
+                    {linkInfo.current_views} / {linkInfo.max_views} views
                   </span>
                 )}
               </div>
@@ -213,7 +299,9 @@ export function PublicCVViewPage() {
 
       {/* CV Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <CVPreview cv={cv} onClose={() => {}} />
+        <div className="bg-white rounded-lg shadow-lg p-8">
+          <CVPreview cv={cv} onClose={() => {}} />
+        </div>
       </div>
 
       {/* Footer */}

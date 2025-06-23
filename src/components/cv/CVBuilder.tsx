@@ -4,10 +4,6 @@ import {
   Save, 
   Eye, 
   Share2, 
-  Zap, 
-  GitBranch, 
-  BarChart3, 
-  Sparkles,
   RefreshCw,
   Plus,
   Settings,
@@ -21,6 +17,7 @@ import {
 } from 'lucide-react';
 import { cvService } from '../../services/cvService';
 import { Button } from '../ui/Button';
+import { Input } from '../ui/Input';
 import { Card, CardContent, CardHeader } from '../ui/Card';
 import { CVSectionEditor } from './CVSectionEditor';
 import { CVPreview } from './CVPreview';
@@ -35,6 +32,7 @@ export function CVBuilder() {
   const [isSaving, setIsSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [showEphemeralLinks, setShowEphemeralLinks] = useState(false);
+  const [cvTitle, setCvTitle] = useState('');
 
   useEffect(() => {
     if (cvId) {
@@ -47,6 +45,7 @@ export function CVBuilder() {
       setIsLoading(true);
       const cvData = await cvService.getCV(cvId!);
       setCV(cvData);
+      setCvTitle(cvData.title);
       
       if (cvData.sections && cvData.sections.length > 0) {
         setActiveSection(cvData.sections[0].id);
@@ -63,11 +62,17 @@ export function CVBuilder() {
     
     try {
       setIsSaving(true);
-      await cvService.updateCV(cv.id, {
-        title: cv.title,
-        metadata: cv.metadata
-      });
       
+      // Update CV title if changed
+      if (cvTitle !== cv.title) {
+        await cvService.updateCV(cv.id, {
+          title: cvTitle,
+          metadata: cv.metadata
+        });
+        setCV(prev => ({ ...prev, title: cvTitle }));
+      }
+      
+      // Save all sections
       for (const section of cv.sections) {
         await cvService.updateCVSection(section.id, {
           content: section.content,
@@ -101,7 +106,7 @@ export function CVBuilder() {
       case 'experience': return <Building className="h-4 w-4" />;
       case 'education': return <Award className="h-4 w-4" />;
       case 'skills': return <Star className="h-4 w-4" />;
-      default: return <Sparkles className="h-4 w-4" />;
+      default: return <FileText className="h-4 w-4" />;
     }
   };
 
@@ -165,7 +170,12 @@ export function CVBuilder() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
-              <h1 className="text-xl font-semibold text-gray-900">{cv.title}</h1>
+              <Input
+                value={cvTitle}
+                onChange={(e) => setCvTitle(e.target.value)}
+                className="text-xl font-semibold border-none bg-transparent px-0 focus:ring-0 focus:border-none"
+                placeholder="CV Title"
+              />
               <div className="flex items-center space-x-2">
                 <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                   cv.status === 'published' ? 'bg-green-100 text-green-800' :
@@ -264,9 +274,6 @@ export function CVBuilder() {
                           {getSectionIcon(section.section_type)}
                           <span className="font-medium">{section.title}</span>
                         </div>
-                        {section.ai_optimized && (
-                          <Sparkles className="h-4 w-4 text-yellow-500" />
-                        )}
                       </div>
                       <div className="flex items-center space-x-2">
                         <div className="flex-1 bg-gray-200 rounded-full h-1.5">
@@ -283,31 +290,6 @@ export function CVBuilder() {
                     </button>
                   );
                 })}
-              </CardContent>
-            </Card>
-
-            {/* Quick Stats */}
-            <Card className="mt-6">
-              <CardHeader>
-                <h3 className="font-semibold">Performance</h3>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Views</span>
-                  <span className="font-semibold">{cv.metadata?.totalViews || 0}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Downloads</span>
-                  <span className="font-semibold">{cv.metadata?.downloadCount || 0}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Shares</span>
-                  <span className="font-semibold">{cv.metadata?.shareCount || 0}</span>
-                </div>
-                <Button variant="outline" size="sm" className="w-full">
-                  <BarChart3 className="h-4 w-4 mr-1" />
-                  View Analytics
-                </Button>
               </CardContent>
             </Card>
           </div>
