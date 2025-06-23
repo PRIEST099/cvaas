@@ -75,6 +75,69 @@ class CVService {
     }
   }
 
+  // Public CV access for widgets - no authentication required
+  async getPublicCVForWidget(cvId: string): Promise<CVWithContent> {
+    try {
+      // Use the RPC function or direct query without authentication
+      const { data: cv, error: cvError } = await supabase
+        .from('cvs')
+        .select(`
+          *,
+          cv_sections!inner (*),
+          education (*),
+          experience (*),
+          projects (*),
+          skills (*)
+        `)
+        .eq('id', cvId)
+        .or('is_public.eq.true,user_id.eq.' + (await getCurrentUser())?.id)
+        .single();
+
+      if (cvError) {
+        // If the above fails, try without authentication for public CVs
+        const { data: publicCV, error: publicError } = await supabase
+          .from('cvs')
+          .select(`
+            *,
+            cv_sections (*),
+            education (*),
+            experience (*),
+            projects (*),
+            skills (*)
+          `)
+          .eq('id', cvId)
+          .eq('is_public', true)
+          .single();
+
+        if (publicError) throw publicError;
+        if (!publicCV) throw new Error('CV not found or not public');
+
+        return {
+          ...publicCV,
+          sections: publicCV.cv_sections || [],
+          education: publicCV.education || [],
+          experience: publicCV.experience || [],
+          projects: publicCV.projects || [],
+          skills: publicCV.skills || []
+        };
+      }
+
+      if (!cv) throw new Error('CV not found');
+
+      return {
+        ...cv,
+        sections: cv.cv_sections || [],
+        education: cv.education || [],
+        experience: cv.experience || [],
+        projects: cv.projects || [],
+        skills: cv.skills || []
+      };
+    } catch (error) {
+      console.error('Error loading CV for widget:', error);
+      throw error;
+    }
+  }
+
   async createCV(cvData: Partial<CVInsert>): Promise<CV> {
     try {
       const user = await getCurrentUser();
