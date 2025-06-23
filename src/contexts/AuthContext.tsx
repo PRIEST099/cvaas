@@ -54,28 +54,37 @@ export function AuthProvider({ children }: AuthProviderProps) {
     console.log('🔄 AuthProvider: Initializing auth state...');
     
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      console.log('🔍 AuthProvider: Initial session check', { 
-        sessionExists: !!session, 
-        userId: session?.user?.id, 
-        error: error?.message 
-      });
-      
-      if (error) {
-        console.error('❌ AuthProvider: Error getting initial session:', error);
+    const initializeAuth = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        console.log('🔍 AuthProvider: Initial session check', { 
+          sessionExists: !!session, 
+          userId: session?.user?.id, 
+          error: error?.message 
+        });
+        
+        if (error) {
+          console.error('❌ AuthProvider: Error getting initial session:', error);
+          setIsLoading(false);
+          return;
+        }
+        
+        if (session?.user) {
+          console.log('✅ AuthProvider: Found existing session for user:', session.user.id);
+          setSupabaseUser(session.user);
+          await loadUserProfile(session.user.id);
+        } else {
+          console.log('ℹ️ AuthProvider: No existing session found');
+          setIsLoading(false);
+        }
+      } catch (error) {
+        console.error('💥 AuthProvider: Error during initialization:', error);
         setIsLoading(false);
-        return;
       }
-      
-      if (session?.user) {
-        console.log('✅ AuthProvider: Found existing session for user:', session.user.id);
-        setSupabaseUser(session.user);
-        loadUserProfile(session.user.id);
-      } else {
-        console.log('ℹ️ AuthProvider: No existing session found');
-        setIsLoading(false);
-      }
-    });
+    };
+
+    initializeAuth();
 
     // Listen for auth changes
     const {
@@ -84,18 +93,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
       console.log('🔔 AuthProvider: Auth state changed', { 
         event, 
         userId: session?.user?.id,
-        sessionExists: !!session,
-        currentUserInState: user?.id
+        sessionExists: !!session
       });
       
       if (session?.user) {
         console.log('✅ AuthProvider: User authenticated:', session.user.id);
         setSupabaseUser(session.user);
         
-        // Only load user profile if:
-        // 1. It's a SIGNED_IN or SIGNED_UP event (new authentication), OR
-        // 2. We don't have a user profile in state, OR  
-        // 3. The user ID in state doesn't match the session user ID
+        // Only load user profile for authentication events or if we don't have a user
         const shouldLoadProfile = 
           event === 'SIGNED_IN' || 
           event === 'SIGNED_UP' || 
@@ -125,7 +130,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       console.log('🧹 AuthProvider: Cleaning up auth subscription');
       subscription.unsubscribe();
     };
-  }, [user]); // Add user as dependency to access current user state
+  }, []); // Remove user from dependency array to prevent re-initialization
 
   const loadUserProfile = async (userId: string) => {
     console.log('👤 loadUserProfile: Loading profile for user:', userId);
