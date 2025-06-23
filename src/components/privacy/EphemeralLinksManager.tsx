@@ -28,6 +28,7 @@ export function EphemeralLinksManager({ cvId }: EphemeralLinksManagerProps) {
   const [links, setLinks] = useState<EphemeralLink[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [deletingLinkId, setDeletingLinkId] = useState<string | null>(null);
   const [newLink, setNewLink] = useState({
     expiresIn: 24,
     maxViews: undefined as number | undefined,
@@ -44,7 +45,11 @@ export function EphemeralLinksManager({ cvId }: EphemeralLinksManagerProps) {
     try {
       setIsLoading(true);
       const linksData = await syndicationService.getEphemeralLinks(user!.id);
-      setLinks(linksData.filter(link => link.cvId === cvId));
+      // Filter by CV ID and sort by creation date (most recent first)
+      const filteredAndSortedLinks = linksData
+        .filter(link => link.cvId === cvId)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setLinks(filteredAndSortedLinks);
     } catch (error) {
       console.error('Failed to load ephemeral links:', error);
     } finally {
@@ -62,7 +67,8 @@ export function EphemeralLinksManager({ cvId }: EphemeralLinksManagerProps) {
         password: newLink.requirePassword ? newLink.password : undefined
       });
       
-      setLinks(prev => [...prev, link]);
+      // Add new link to the beginning of the array (most recent first)
+      setLinks(prev => [link, ...prev]);
       setShowCreateModal(false);
       setNewLink({
         expiresIn: 24,
@@ -73,6 +79,19 @@ export function EphemeralLinksManager({ cvId }: EphemeralLinksManagerProps) {
       });
     } catch (error) {
       console.error('Failed to create ephemeral link:', error);
+    }
+  };
+
+  const handleDeleteLink = async (linkId: string) => {
+    try {
+      setDeletingLinkId(linkId);
+      await syndicationService.deleteEphemeralLink(linkId);
+      // Remove the deleted link from the state
+      setLinks(prev => prev.filter(link => link.id !== linkId));
+    } catch (error) {
+      console.error('Failed to delete ephemeral link:', error);
+    } finally {
+      setDeletingLinkId(null);
     }
   };
 
@@ -141,6 +160,9 @@ export function EphemeralLinksManager({ cvId }: EphemeralLinksManagerProps) {
                         Inactive
                       </span>
                     )}
+                    <span className="text-xs text-gray-500">
+                      Created {new Date(link.createdAt).toLocaleDateString()}
+                    </span>
                   </div>
                   
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
@@ -195,8 +217,14 @@ export function EphemeralLinksManager({ cvId }: EphemeralLinksManagerProps) {
                     variant="ghost"
                     size="sm"
                     className="text-red-600 hover:text-red-700"
+                    onClick={() => handleDeleteLink(link.id)}
+                    disabled={deletingLinkId === link.id}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    {deletingLinkId === link.id ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
                   </Button>
                 </div>
               </div>

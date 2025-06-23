@@ -105,6 +105,20 @@ class SyndicationService {
     }
   }
 
+  async deleteEphemeralLink(linkId: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('ephemeral_links')
+        .delete()
+        .eq('id', linkId);
+
+      if (error) throw error;
+    } catch (error) {
+      handleSupabaseError(error);
+      throw error;
+    }
+  }
+
   async accessEphemeralLink(accessToken: string, password?: string): Promise<{
     success: boolean;
     cv?: any;
