@@ -16,6 +16,7 @@ export function PublicCVViewPage() {
   const [password, setPassword] = useState('');
   const [requiresPassword, setRequiresPassword] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [hasAttemptedPassword, setHasAttemptedPassword] = useState(false);
 
   useEffect(() => {
     if (accessToken) {
@@ -36,9 +37,18 @@ export function PublicCVViewPage() {
         setCV(result.cv);
         setLinkInfo(result.link);
         setRequiresPassword(false);
-      } else if (result.error === 'Invalid password') {
+        setHasAttemptedPassword(false);
+      } else if (result.error === 'Password required' || result.error === 'Invalid password') {
         setRequiresPassword(true);
-        setError('Invalid password. Please try again.');
+        
+        if (result.error === 'Password required' && !hasAttemptedPassword) {
+          // First time accessing a password-protected link - don't show error
+          setError('');
+        } else if (result.error === 'Invalid password' || hasAttemptedPassword) {
+          // User entered wrong password or this is a retry
+          setError('Invalid password. Please try again.');
+          setHasAttemptedPassword(true);
+        }
       } else {
         setError(result.error || 'Failed to access CV');
       }
@@ -52,6 +62,7 @@ export function PublicCVViewPage() {
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (password.trim()) {
+      setHasAttemptedPassword(true);
       accessLink(password);
     }
   };
@@ -208,6 +219,7 @@ export function PublicCVViewPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                autoFocus
               />
               
               <Button type="submit" className="w-full" disabled={!password.trim()}>
