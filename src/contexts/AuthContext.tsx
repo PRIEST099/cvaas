@@ -102,11 +102,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
     console.log('👤 loadUserProfile: Loading profile for user:', userId);
     
     try {
-      const { data, error } = await supabase
+      // Create a timeout promise to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Profile loading timeout')), 10000); // 10 second timeout
+      });
+
+      // Race between the actual query and the timeout
+      const queryPromise = supabase
         .from('users')
         .select('*')
         .eq('id', userId)
         .single();
+
+      const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
 
       console.log('📊 loadUserProfile: Query result', { 
         profileFound: !!data, 
@@ -117,9 +125,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (error) {
         if (error.code === 'PGRST116') {
           console.log('ℹ️ loadUserProfile: User profile not found (new user), this is normal for fresh registrations');
-          // For new users, we'll create the profile during registration
+          // Explicitly set user to null when profile is not found
+          setUser(null);
         } else {
           console.error('❌ loadUserProfile: Error loading profile:', error);
+          // Set user to null for any other error as well
+          setUser(null);
           throw error;
         }
       } else if (data) {
@@ -130,11 +141,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
           firstName: data.first_name
         });
         setUser(data);
+      } else {
+        // Handle case where no error but also no data
+        console.log('ℹ️ loadUserProfile: No profile data returned');
+        setUser(null);
       }
     } catch (error) {
       console.error('💥 loadUserProfile: Exception occurred:', error);
+      // Explicitly set user to null on any exception
+      setUser(null);
       // Don't throw here to prevent auth flow interruption
     } finally {
+      // CRITICAL: Always set loading to false
       setIsLoading(false);
     }
   };
@@ -173,6 +191,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } catch (error) {
       console.error('💥 login: Exception during login:', error);
       handleSupabaseError(error);
+      throw error; // Re-throw to allow UI to handle the error
     } finally {
       // CRITICAL FIX: Always set loading to false regardless of success or failure
       setIsLoading(false);
