@@ -102,9 +102,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     console.log('👤 loadUserProfile: Loading profile for user:', userId);
     
     try {
-      // Create a timeout promise to prevent hanging - increased to 30 seconds
+      // Create a timeout promise to prevent hanging - increased to 60 seconds
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Profile loading timeout')), 30000); // 30 second timeout
+        setTimeout(() => reject(new Error('Profile loading timeout')), 60000); // 60 second timeout
       });
 
       // Race between the actual query and the timeout
