@@ -1,4 +1,4 @@
-import Purchases, { CustomerInfo, PurchasesOffering } from 'purchases-js';
+import Purchases, { CustomerInfo, PurchasesOffering } from '@revenuecat/purchases-js';
 import { syndicationService } from './syndicationService';
 import { getCurrentUser } from '../lib/supabase';
 
