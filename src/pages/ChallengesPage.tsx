@@ -11,24 +11,22 @@ import {
   TrendingUp,
   Clock
 } from 'lucide-react';
-import { MiniChallenge, ChallengeCategory, ChallengeDifficulty } from '../types/collaboration';
-import { collaborationService } from '../services/collaborationService';
+import { questService } from '../services/questService';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card, CardContent, CardHeader } from '../components/ui/Card';
-import { ChallengeCard } from '../components/collaboration/ChallengeCard';
 
 export function ChallengesPage() {
   const { user } = useAuth();
-  const [challenges, setChallenges] = useState<MiniChallenge[]>([]);
-  const [filteredChallenges, setFilteredChallenges] = useState<MiniChallenge[]>([]);
+  const [challenges, setChallenges] = useState([]);
+  const [filteredChallenges, setFilteredChallenges] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<ChallengeCategory | 'all'>('all');
-  const [selectedDifficulty, setSelectedDifficulty] = useState<ChallengeDifficulty | 'all'>('all');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedDifficulty, setSelectedDifficulty] = useState('all');
 
-  const categories: { value: ChallengeCategory | 'all'; label: string; icon: any }[] = [
+  const categories = [
     { value: 'all', label: 'All Categories', icon: Target },
     { value: 'coding', label: 'Coding', icon: Code },
     { value: 'design', label: 'Design', icon: PenTool },
@@ -36,7 +34,7 @@ export function ChallengesPage() {
     { value: 'analysis', label: 'Analysis', icon: BarChart3 }
   ];
 
-  const difficulties: { value: ChallengeDifficulty | 'all'; label: string }[] = [
+  const difficulties = [
     { value: 'all', label: 'All Levels' },
     { value: 'beginner', label: 'Beginner' },
     { value: 'intermediate', label: 'Intermediate' },
@@ -55,7 +53,7 @@ export function ChallengesPage() {
   const loadChallenges = async () => {
     try {
       setIsLoading(true);
-      const challengesData = await collaborationService.getChallenges();
+      const challengesData = await questService.getQuests();
       setChallenges(challengesData);
     } catch (error) {
       console.error('Failed to load challenges:', error);
@@ -72,9 +70,9 @@ export function ChallengesPage() {
       filtered = filtered.filter(challenge =>
         challenge.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         challenge.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        challenge.skillsAssessed.some(skill => 
+        (challenge.skills_assessed && challenge.skills_assessed.some(skill => 
           skill.toLowerCase().includes(searchTerm.toLowerCase())
-        )
+        ))
       );
     }
 
@@ -91,7 +89,7 @@ export function ChallengesPage() {
     setFilteredChallenges(filtered);
   };
 
-  const handleStartChallenge = (challenge: MiniChallenge) => {
+  const handleStartChallenge = (challenge) => {
     // TODO: Navigate to challenge interface
     console.log('Starting challenge:', challenge.id);
   };
@@ -151,7 +149,7 @@ export function ChallengesPage() {
             <div>
               <select
                 value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value as any)}
+                onChange={(e) => setSelectedCategory(e.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 {categories.map((category) => (
@@ -166,7 +164,7 @@ export function ChallengesPage() {
             <div>
               <select
                 value={selectedDifficulty}
-                onChange={(e) => setSelectedDifficulty(e.target.value as any)}
+                onChange={(e) => setSelectedDifficulty(e.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 {difficulties.map((difficulty) => (
@@ -228,16 +226,96 @@ export function ChallengesPage() {
       {filteredChallenges.length > 0 ? (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredChallenges.map((challenge) => (
-            <ChallengeCard
-              key={challenge.id}
-              challenge={challenge}
-              onStartChallenge={handleStartChallenge}
-              userProgress={{
-                hasAttempted: Math.random() > 0.7, // Mock data
-                bestScore: Math.floor(Math.random() * 40) + 60,
-                status: Math.random() > 0.5 ? 'passed' : 'failed'
-              }}
-            />
+            <Card key={challenge.id} className="hover:shadow-lg transition-shadow">
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                      <Code className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-lg text-gray-900">{challenge.title}</h3>
+                      <p className="text-sm text-gray-600">{challenge.description}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-col items-end space-y-2">
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                      challenge.difficulty === 'beginner' ? 'bg-green-100 text-green-800' :
+                      challenge.difficulty === 'intermediate' ? 'bg-yellow-100 text-yellow-800' :
+                      challenge.difficulty === 'advanced' ? 'bg-orange-100 text-orange-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      {challenge.difficulty.charAt(0).toUpperCase() + challenge.difficulty.slice(1)}
+                    </span>
+                  </div>
+                </div>
+              </CardHeader>
+
+              <CardContent>
+                <div className="space-y-4">
+                  {/* Skills Assessed */}
+                  <div className="mb-4">
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">Skills Assessed</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {(challenge.skills_assessed || []).slice(0, 4).map((skill, index) => (
+                        <span
+                          key={index}
+                          className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800"
+                        >
+                          {skill}
+                        </span>
+                      ))}
+                      {(challenge.skills_assessed || []).length > 4 && (
+                        <span className="text-xs text-gray-500">
+                          +{(challenge.skills_assessed || []).length - 4} more
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Challenge Stats */}
+                  <div className="grid grid-cols-3 gap-4 mb-4 text-center">
+                    <div>
+                      <div className="flex items-center justify-center mb-1">
+                        <Clock className="h-4 w-4 text-gray-500 mr-1" />
+                        <span className="text-sm font-semibold text-gray-900">
+                          {challenge.estimated_time ? `${challenge.estimated_time}m` : 'No limit'}
+                        </span>
+                      </div>
+                      <div className="text-xs text-gray-600">Time Limit</div>
+                    </div>
+                    
+                    <div>
+                      <div className="flex items-center justify-center mb-1">
+                        <Users className="h-4 w-4 text-gray-500 mr-1" />
+                        <span className="text-sm font-semibold text-gray-900">{challenge.total_attempts}</span>
+                      </div>
+                      <div className="text-xs text-gray-600">Attempts</div>
+                    </div>
+                    
+                    <div>
+                      <div className="flex items-center justify-center mb-1">
+                        <TrendingUp className="h-4 w-4 text-gray-500 mr-1" />
+                        <span className="text-sm font-semibold text-gray-900">
+                          {Math.round((challenge.success_rate || 0) * 100)}%
+                        </span>
+                      </div>
+                      <div className="text-xs text-gray-600">Success Rate</div>
+                    </div>
+                  </div>
+
+                  {/* Action Button */}
+                  <Button
+                    onClick={() => handleStartChallenge(challenge)}
+                    className="w-full"
+                    disabled={!challenge.is_active}
+                  >
+                    Start Challenge
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
       ) : (
@@ -270,7 +348,7 @@ export function ChallengesPage() {
         <Card>
           <CardContent className="p-6 text-center">
             <Award className="h-8 w-8 text-yellow-600 mx-auto mb-2" />
-            <div className="text-2xl font-bold text-gray-900">1,658</div>
+            <div className="text-2xl font-bold text-gray-900">0</div>
             <div className="text-sm text-gray-600">Badges Earned</div>
           </CardContent>
         </Card>
@@ -278,7 +356,9 @@ export function ChallengesPage() {
         <Card>
           <CardContent className="p-6 text-center">
             <TrendingUp className="h-8 w-8 text-green-600 mx-auto mb-2" />
-            <div className="text-2xl font-bold text-gray-900">71%</div>
+            <div className="text-2xl font-bold text-gray-900">
+              {challenges.length > 0 ? Math.round(challenges.reduce((sum, c) => sum + (c.success_rate || 0), 0) / challenges.length * 100) : 0}%
+            </div>
             <div className="text-sm text-gray-600">Avg Success Rate</div>
           </CardContent>
         </Card>
@@ -286,7 +366,9 @@ export function ChallengesPage() {
         <Card>
           <CardContent className="p-6 text-center">
             <Clock className="h-8 w-8 text-purple-600 mx-auto mb-2" />
-            <div className="text-2xl font-bold text-gray-900">45m</div>
+            <div className="text-2xl font-bold text-gray-900">
+              {challenges.length > 0 ? Math.round(challenges.reduce((sum, c) => sum + (c.estimated_time || 0), 0) / challenges.length) : 0}m
+            </div>
             <div className="text-sm text-gray-600">Avg Completion Time</div>
           </CardContent>
         </Card>

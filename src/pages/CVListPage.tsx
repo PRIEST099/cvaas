@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Plus, Eye, Share2, Download, MoreVertical, Sparkles, GitBranch } from 'lucide-react';
-import { CV } from '../types/cv';
 import { cvService } from '../services/cvService';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/Button';
@@ -10,7 +9,7 @@ import { Card, CardContent, CardHeader } from '../components/ui/Card';
 export function CVListPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [cvs, setCVs] = useState<CV[]>([]);
+  const [cvs, setCVs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -22,7 +21,7 @@ export function CVListPage() {
   const loadCVs = async () => {
     try {
       setIsLoading(true);
-      const cvsData = await cvService.getCVs(user!.id);
+      const cvsData = await cvService.getCVs();
       setCVs(cvsData);
     } catch (error) {
       console.error('Failed to load CVs:', error);
@@ -34,50 +33,10 @@ export function CVListPage() {
   const createNewCV = async () => {
     try {
       const newCV = await cvService.createCV({
-        userId: user!.id,
         title: 'Untitled CV',
-        isPublic: false,
-        templateId: 'modern-1',
-        version: 1,
+        is_public: false,
+        template_id: 'modern-1',
         status: 'draft',
-        sections: [
-          {
-            id: 'personal_info',
-            type: 'personal_info',
-            title: 'Personal Information',
-            content: {},
-            order: 0,
-            isVisible: true,
-            aiOptimized: false
-          },
-          {
-            id: 'summary',
-            type: 'summary',
-            title: 'Professional Summary',
-            content: {},
-            order: 1,
-            isVisible: true,
-            aiOptimized: false
-          },
-          {
-            id: 'experience',
-            type: 'experience',
-            title: 'Experience',
-            content: { experiences: [] },
-            order: 2,
-            isVisible: true,
-            aiOptimized: false
-          }
-        ],
-        aiOptimizations: [],
-        skillsRadar: {
-          id: `skills_${Date.now()}`,
-          lastScanned: new Date().toISOString(),
-          sources: [],
-          detectedSkills: [],
-          manualSkills: [],
-          skillCategories: []
-        },
         metadata: {
           totalViews: 0,
           uniqueViews: 0,
@@ -149,9 +108,6 @@ export function CVListPage() {
                       }`}>
                         {cv.status}
                       </span>
-                      {cv.aiOptimizations.length > 0 && (
-                        <Sparkles className="h-4 w-4 text-yellow-500" />
-                      )}
                       <span className="text-xs text-gray-500">v{cv.version}</span>
                     </div>
                   </div>
@@ -165,15 +121,15 @@ export function CVListPage() {
               <CardContent>
                 <div className="grid grid-cols-3 gap-4 text-center mb-6">
                   <div>
-                    <div className="text-lg font-semibold text-gray-900">{cv.metadata.totalViews}</div>
+                    <div className="text-lg font-semibold text-gray-900">{cv.metadata?.totalViews || 0}</div>
                     <div className="text-xs text-gray-500">Views</div>
                   </div>
                   <div>
-                    <div className="text-lg font-semibold text-gray-900">{cv.metadata.downloadCount}</div>
+                    <div className="text-lg font-semibold text-gray-900">{cv.metadata?.downloadCount || 0}</div>
                     <div className="text-xs text-gray-500">Downloads</div>
                   </div>
                   <div>
-                    <div className="text-lg font-semibold text-gray-900">{cv.metadata.shareCount}</div>
+                    <div className="text-lg font-semibold text-gray-900">{cv.metadata?.shareCount || 0}</div>
                     <div className="text-xs text-gray-500">Shares</div>
                   </div>
                 </div>
@@ -200,7 +156,7 @@ export function CVListPage() {
                   </Button>
                 </div>
                 
-                {cv.publicUrl && (
+                {cv.public_url && (
                   <div className="mt-3 p-2 bg-green-50 rounded-lg">
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-green-700">Public CV</span>
