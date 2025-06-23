@@ -13,7 +13,7 @@ export function ProtectedRoute({
   requiredRole, 
   redirectTo = '/login' 
 }: ProtectedRouteProps) {
-  const { user, isLoading } = useAuth();
+  const { user, supabaseUser, isLoading } = useAuth();
 
   if (isLoading) {
     return (
@@ -21,6 +21,11 @@ export function ProtectedRoute({
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
       </div>
     );
+  }
+
+  // If user is authenticated in Supabase but doesn't have a profile, redirect to complete profile
+  if (supabaseUser && !user) {
+    return <Navigate to="/complete-profile" replace />;
   }
 
   if (!user) {

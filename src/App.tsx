@@ -6,6 +6,7 @@ import { Layout } from './components/layout/Layout';
 import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
+import { CompleteProfilePage } from './pages/auth/CompleteProfilePage';
 import { DashboardPage } from './pages/DashboardPage';
 import { CVListPage } from './pages/CVListPage';
 import { CVBuilder } from './components/cv/CVBuilder';
@@ -14,146 +15,117 @@ import { ChallengesPage } from './pages/ChallengesPage';
 import { SyndicationPage } from './pages/SyndicationPage';
 import { WidgetPage } from './pages/WidgetPage';
 import { EnterprisePage } from './pages/EnterprisePage';
-import { PublicCVViewPage } from './pages/PublicCVViewPage';
-import { WidgetViewPage } from './pages/WidgetViewPage';
 
 function AppRoutes() {
-  const { user } = useAuth();
+  const { user, supabaseUser, isLoading } = useAuth();
+
+  // Show loading spinner while auth is initializing
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  // If user is authenticated in Supabase but doesn't have a profile, redirect to complete profile
+  if (supabaseUser && !user) {
+    return (
+      <Layout>
+        <Routes>
+          <Route path="/complete-profile" element={<CompleteProfilePage />} />
+          <Route path="*" element={<Navigate to="/complete-profile" replace />} />
+        </Routes>
+      </Layout>
+    );
+  }
 
   return (
-    <Routes>
-      {/* Public routes */}
-      <Route path="/" element={user ? <Navigate to="/dashboard" /> : <HomePage />} />
-      <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <LoginPage />} />
-      <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <RegisterPage />} />
-      
-      {/* Public CV viewing via ephemeral links */}
-      <Route path="/cv/ephemeral/:accessToken" element={<PublicCVViewPage />} />
-      
-      {/* Public widget view (no authentication required) */}
-      <Route path="/widget/cv/:cvId" element={<WidgetViewPage />} />
-      
-      {/* Protected routes */}
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <Layout>
+    <Layout>
+      <Routes>
+        <Route path="/" element={user ? <Navigate to="/dashboard" /> : <HomePage />} />
+        <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <LoginPage />} />
+        <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <RegisterPage />} />
+        <Route path="/complete-profile" element={user ? <Navigate to="/dashboard" /> : <CompleteProfilePage />} />
+        
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
               <DashboardPage />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-      
-      <Route
-        path="/cvs"
-        element={
-          <ProtectedRoute requiredRole="candidate">
-            <Layout>
+            </ProtectedRoute>
+          }
+        />
+        
+        <Route
+          path="/cvs"
+          element={
+            <ProtectedRoute requiredRole="candidate">
               <CVListPage />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-      
-      <Route
-        path="/cvs/:cvId/edit"
-        element={
-          <ProtectedRoute requiredRole="candidate">
-            <Layout>
+            </ProtectedRoute>
+          }
+        />
+        
+        <Route
+          path="/cvs/:cvId/edit"
+          element={
+            <ProtectedRoute requiredRole="candidate">
               <CVBuilder />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-      
-      <Route
-        path="/cvs/:cvId/widget"
-        element={
-          <ProtectedRoute requiredRole="candidate">
-            <Layout>
+            </ProtectedRoute>
+          }
+        />
+        
+        <Route
+          path="/cvs/:cvId/widget"
+          element={
+            <ProtectedRoute requiredRole="candidate">
               <WidgetPage />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-      
-      <Route
-        path="/talent"
-        element={
-          <ProtectedRoute requiredRole="recruiter">
-            <Layout>
+            </ProtectedRoute>
+          }
+        />
+        
+        <Route
+          path="/talent"
+          element={
+            <ProtectedRoute requiredRole="recruiter">
               <TalentDiscoveryPage />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-      
-      <Route
-        path="/challenges"
-        element={
-          <ProtectedRoute>
-            <Layout>
+            </ProtectedRoute>
+          }
+        />
+        
+        <Route
+          path="/challenges"
+          element={
+            <ProtectedRoute>
               <ChallengesPage />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-      
-      <Route
-        path="/syndication"
-        element={
-          <ProtectedRoute requiredRole="recruiter">
-            <Layout>
+            </ProtectedRoute>
+          }
+        />
+        
+        <Route
+          path="/syndication"
+          element={
+            <ProtectedRoute requiredRole="recruiter">
               <SyndicationPage />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-      
-      <Route
-        path="/enterprise"
-        element={
-          <ProtectedRoute requiredRole="recruiter">
-            <Layout>
+            </ProtectedRoute>
+          }
+        />
+        
+        <Route
+          path="/enterprise"
+          element={
+            <ProtectedRoute requiredRole="recruiter">
               <EnterprisePage />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-      
-      {/* Placeholder routes for future pages */}
-      <Route 
-        path="/quests" 
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <ChallengesPage />
-            </Layout>
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/projects" 
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <div className="p-8">Projects page coming soon...</div>
-            </Layout>
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/settings" 
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <div className="p-8">Settings page coming soon...</div>
-            </Layout>
-          </ProtectedRoute>
-        } 
-      />
-    </Routes>
+            </ProtectedRoute>
+          }
+        />
+        
+        {/* Placeholder routes for future pages */}
+        <Route path="/quests" element={<ProtectedRoute><ChallengesPage /></ProtectedRoute>} />
+        <Route path="/projects" element={<ProtectedRoute><div className="p-8">Projects page coming soon...</div></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><div className="p-8">Settings page coming soon...</div></ProtectedRoute>} />
+      </Routes>
+    </Layout>
   );
 }
 

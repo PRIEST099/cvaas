@@ -102,11 +102,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
     console.log('👤 loadUserProfile: Loading profile for user:', userId);
     
     try {
-      const { data, error } = await supabase
+      // Create a timeout promise to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Profile loading timeout')), 10000); // 10 second timeout
+      });
+
+      // Race between the actual query and the timeout
+      const queryPromise = supabase
         .from('users')
         .select('*')
         .eq('id', userId)
         .single();
+
+      const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
 
       console.log('📊 loadUserProfile: Query result', { 
         profileFound: !!data, 
@@ -117,13 +125,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (error) {
         if (error.code === 'PGRST116') {
           console.log('ℹ️ loadUserProfile: User profile not found (new user), this is normal for fresh registrations');
-          // For new users without profiles, don't set loading to false here
-          // Let the register function handle the loading state
+          // Explicitly set user to null when profile is not found
           setUser(null);
         } else {
           console.error('❌ loadUserProfile: Error loading profile:', error);
+          // Set user to null for any other error as well
           setUser(null);
-          setIsLoading(false);
           throw error;
         }
       } else if (data) {
@@ -134,16 +141,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
           firstName: data.first_name
         });
         setUser(data);
-        setIsLoading(false);
       } else {
         // Handle case where no error but also no data
         console.log('ℹ️ loadUserProfile: No profile data returned');
         setUser(null);
-        setIsLoading(false);
       }
     } catch (error) {
       console.error('💥 loadUserProfile: Exception occurred:', error);
+      // Explicitly set user to null on any exception
       setUser(null);
+      // Don't throw here to prevent auth flow interruption
+    } finally {
+      // CRITICAL: Always set loading to false
       setIsLoading(false);
     }
   };
@@ -156,7 +165,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       
       console.log('📡 login: Calling supabase.auth.signInWithPassword...');
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(), // Normalize email
+        email,
         password,
       });
 
@@ -168,13 +177,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       if (error) {
         console.error('❌ login: Authentication failed:', error);
-        setIsLoading(false);
         throw error;
       }
 
       if (!data.user) {
         console.warn('⚠️ login: No user returned despite no error');
-        setIsLoading(false);
         throw new Error('Login failed: No user data received');
       }
 
@@ -183,9 +190,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
       
     } catch (error) {
       console.error('💥 login: Exception during login:', error);
-      setIsLoading(false);
       handleSupabaseError(error);
-      throw error;
+      throw error; // Re-throw to allow UI to handle the error
+    } finally {
+      // CRITICAL FIX: Always set loading to false regardless of success or failure
+      setIsLoading(false);
     }
   };
 
@@ -205,11 +214,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Step 1: Sign up the user with Supabase Auth
       console.log('📡 register: Calling supabase.auth.signUp...');
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: userData.email.trim().toLowerCase(), // Normalize email
+        email: userData.email,
         password: userData.password,
-        options: {
-          emailRedirectTo: undefined, // Disable email confirmation
-        }
       });
 
       console.log('📊 register: SignUp response', { 
@@ -244,11 +250,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
       console.log('📡 register: Creating user profile in database...');
       const profileData = {
         id: authData.user.id,
-        email: userData.email.trim().toLowerCase(),
+        email: userData.email,
         role: userData.role,
-        first_name: userData.firstName.trim(),
-        last_name: userData.lastName.trim(),
-        company_name: userData.companyName?.trim() || null,
+        first_name: userData.firstName,
+        last_name: userData.lastName,
+        company_name: userData.companyName || null,
       };
       
       console.log('📋 register: Profile data to insert:', profileData);
@@ -290,9 +296,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       
     } catch (error) {
       console.error('💥 register: Exception during registration:', error);
-      throw error;
+      throw error; // Re-throw the error so the UI can handle it properly
     } finally {
-      // CRITICAL: Always set loading to false in finally block
+      // CRITICAL FIX: Always set loading to false regardless of success or failure
       setIsLoading(false);
     }
   };
@@ -336,33 +342,56 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       setIsLoading(true);
       
-      const { data, error } = await supabase
-        .from('users')
-        .update(updates)
-        .eq('id', supabaseUser.id)
-        .select()
-        .single();
+      // If this is a new profile creation (user exists but no profile), use insert instead of update
+      if (!user) {
+        console.log('📡 updateProfile: Creating new profile (insert)...');
+        const { data, error } = await supabase
+          .from('users')
+          .insert({
+            id: supabaseUser.id,
+            email: supabaseUser.email || '',
+            ...updates
+          })
+          .select()
+          .single();
 
-      console.log('📊 updateProfile: Update result', { 
-        updated: !!data, 
-        error: error?.message 
-      });
+        if (error) {
+          console.error('❌ updateProfile: Insert failed:', error);
+          throw error;
+        }
+        
+        if (!data) {
+          throw new Error('Profile creation returned no data');
+        }
+        
+        console.log('✅ updateProfile: Profile created successfully');
+        setUser(data);
+      } else {
+        console.log('📡 updateProfile: Updating existing profile...');
+        const { data, error } = await supabase
+          .from('users')
+          .update(updates)
+          .eq('id', supabaseUser.id)
+          .select()
+          .single();
 
-      if (error) {
-        console.error('❌ updateProfile: Update failed:', error);
-        throw error;
+        if (error) {
+          console.error('❌ updateProfile: Update failed:', error);
+          throw error;
+        }
+        
+        if (!data) {
+          throw new Error('Profile update returned no data');
+        }
+        
+        console.log('✅ updateProfile: Profile updated successfully');
+        setUser(data);
       }
-      
-      if (!data) {
-        throw new Error('Profile update returned no data');
-      }
-      
-      console.log('✅ updateProfile: Profile updated successfully');
-      setUser(data);
       
     } catch (error) {
       console.error('💥 updateProfile: Exception during update:', error);
       handleSupabaseError(error);
+      throw error;
     } finally {
       setIsLoading(false);
     }
