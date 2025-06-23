@@ -47,10 +47,16 @@ export function IndividualDashboard() {
     );
   }
 
+  // Calculate total views from all CVs
+  const totalViews = cvs.reduce((total, cv) => {
+    const views = cv.metadata?.totalViews || cv.metadata?.views || 0;
+    return total + views;
+  }, 0);
+
   const stats = {
     cvs: cvs.length,
     questsCompleted: submissions.filter(s => s.status === 'passed').length,
-    profileViews: cvs.reduce((total, cv) => total + (cv.metadata?.totalViews || 0), 0),
+    profileViews: totalViews,
     badges: badges.length,
   };
 
@@ -111,33 +117,39 @@ export function IndividualDashboard() {
             </Button>
           </CardHeader>
           <CardContent className="space-y-4">
-            {cvs.slice(0, 3).map((cv) => (
-              <div key={cv.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                <div className="flex-1">
-                  <h3 className="font-medium text-gray-900">{cv.title}</h3>
-                  <div className="flex items-center space-x-4 text-sm text-gray-500 mt-1">
-                    <span className="flex items-center">
-                      <Eye className="h-4 w-4 mr-1" />
-                      {cv.metadata?.totalViews || 0} views
-                    </span>
-                    <span>Updated {new Date(cv.updated_at).toLocaleDateString()}</span>
-                    {cv.is_public && (
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
-                        Public
+            {cvs.slice(0, 3).map((cv) => {
+              const views = cv.metadata?.totalViews || cv.metadata?.views || 0;
+              const downloads = cv.metadata?.downloadCount || cv.metadata?.downloads || 0;
+              const shares = cv.metadata?.shareCount || cv.metadata?.shares || 0;
+              
+              return (
+                <div key={cv.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                  <div className="flex-1">
+                    <h3 className="font-medium text-gray-900">{cv.title}</h3>
+                    <div className="flex items-center space-x-4 text-sm text-gray-500 mt-1">
+                      <span className="flex items-center">
+                        <Eye className="h-4 w-4 mr-1" />
+                        {views} views
                       </span>
-                    )}
+                      <span>Updated {new Date(cv.updated_at).toLocaleDateString()}</span>
+                      {cv.is_public && (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
+                          Public
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button variant="ghost" size="sm">
+                      <Share2 className="h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" size="sm">
+                      <Link to={`/cvs/${cv.id}/edit`}>Edit</Link>
+                    </Button>
                   </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Button variant="ghost" size="sm">
-                    <Share2 className="h-4 w-4" />
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    <Link to={`/cvs/${cv.id}/edit`}>Edit</Link>
-                  </Button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
             {cvs.length === 0 && (
               <div className="text-center py-8">
                 <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
