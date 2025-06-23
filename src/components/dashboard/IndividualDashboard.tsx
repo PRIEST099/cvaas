@@ -167,9 +167,9 @@ export function IndividualDashboard() {
               <div key={submission.id} className="p-4 border border-gray-200 rounded-lg">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <h3 className="font-medium text-gray-900">{submission.quests?.title}</h3>
+                    <h3 className="font-medium text-gray-900">Quest Submission</h3>
                     <p className="text-sm text-gray-600 mt-1">
-                      {submission.quests?.category} • {submission.quests?.difficulty}
+                      Submitted {new Date(submission.submitted_at).toLocaleDateString()}
                     </p>
                   </div>
                   <div className="flex items-center space-x-2">

@@ -6,10 +6,6 @@ type CVInsert = Database['public']['Tables']['cvs']['Insert'];
 type CVUpdate = Database['public']['Tables']['cvs']['Update'];
 type CVSection = Database['public']['Tables']['cv_sections']['Row'];
 type CVSectionInsert = Database['public']['Tables']['cv_sections']['Insert'];
-type Education = Database['public']['Tables']['education']['Row'];
-type Experience = Database['public']['Tables']['experience']['Row'];
-type Project = Database['public']['Tables']['projects']['Row'];
-type Skill = Database['public']['Tables']['skills']['Row'];
 
 class CVService {
   // CV Management
@@ -172,258 +168,6 @@ class CVService {
     }
   }
 
-  // Education
-  async getEducation(cvId: string): Promise<Education[]> {
-    try {
-      const { data, error } = await supabase
-        .from('education')
-        .select('*')
-        .eq('cv_id', cvId)
-        .order('start_date', { ascending: false });
-
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      handleSupabaseError(error);
-      return [];
-    }
-  }
-
-  async addEducation(education: Omit<Education, 'id' | 'created_at' | 'updated_at'>): Promise<Education> {
-    try {
-      const { data, error } = await supabase
-        .from('education')
-        .insert(education)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      handleSupabaseError(error);
-      throw error;
-    }
-  }
-
-  async updateEducation(educationId: string, updates: Partial<Education>): Promise<Education> {
-    try {
-      const { data, error } = await supabase
-        .from('education')
-        .update(updates)
-        .eq('id', educationId)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      handleSupabaseError(error);
-      throw error;
-    }
-  }
-
-  async deleteEducation(educationId: string): Promise<void> {
-    try {
-      const { error } = await supabase
-        .from('education')
-        .delete()
-        .eq('id', educationId);
-
-      if (error) throw error;
-    } catch (error) {
-      handleSupabaseError(error);
-    }
-  }
-
-  // Experience
-  async getExperience(cvId: string): Promise<Experience[]> {
-    try {
-      const { data, error } = await supabase
-        .from('experience')
-        .select('*')
-        .eq('cv_id', cvId)
-        .order('start_date', { ascending: false });
-
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      handleSupabaseError(error);
-      return [];
-    }
-  }
-
-  async addExperience(experience: Omit<Experience, 'id' | 'created_at' | 'updated_at'>): Promise<Experience> {
-    try {
-      const { data, error } = await supabase
-        .from('experience')
-        .insert(experience)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      handleSupabaseError(error);
-      throw error;
-    }
-  }
-
-  async updateExperience(experienceId: string, updates: Partial<Experience>): Promise<Experience> {
-    try {
-      const { data, error } = await supabase
-        .from('experience')
-        .update(updates)
-        .eq('id', experienceId)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      handleSupabaseError(error);
-      throw error;
-    }
-  }
-
-  async deleteExperience(experienceId: string): Promise<void> {
-    try {
-      const { error } = await supabase
-        .from('experience')
-        .delete()
-        .eq('id', experienceId);
-
-      if (error) throw error;
-    } catch (error) {
-      handleSupabaseError(error);
-    }
-  }
-
-  // Projects
-  async getProjects(cvId: string): Promise<Project[]> {
-    try {
-      const { data, error } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('cv_id', cvId)
-        .order('start_date', { ascending: false });
-
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      handleSupabaseError(error);
-      return [];
-    }
-  }
-
-  async addProject(project: Omit<Project, 'id' | 'created_at' | 'updated_at'>): Promise<Project> {
-    try {
-      const { data, error } = await supabase
-        .from('projects')
-        .insert(project)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      handleSupabaseError(error);
-      throw error;
-    }
-  }
-
-  async updateProject(projectId: string, updates: Partial<Project>): Promise<Project> {
-    try {
-      const { data, error } = await supabase
-        .from('projects')
-        .update(updates)
-        .eq('id', projectId)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      handleSupabaseError(error);
-      throw error;
-    }
-  }
-
-  async deleteProject(projectId: string): Promise<void> {
-    try {
-      const { error } = await supabase
-        .from('projects')
-        .delete()
-        .eq('id', projectId);
-
-      if (error) throw error;
-    } catch (error) {
-      handleSupabaseError(error);
-    }
-  }
-
-  // Skills
-  async getSkills(cvId: string): Promise<Skill[]> {
-    try {
-      const { data, error } = await supabase
-        .from('skills')
-        .select('*')
-        .eq('cv_id', cvId)
-        .order('proficiency_level', { ascending: false });
-
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      handleSupabaseError(error);
-      return [];
-    }
-  }
-
-  async addSkill(skill: Omit<Skill, 'id' | 'created_at' | 'updated_at'>): Promise<Skill> {
-    try {
-      const { data, error } = await supabase
-        .from('skills')
-        .insert(skill)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      handleSupabaseError(error);
-      throw error;
-    }
-  }
-
-  async updateSkill(skillId: string, updates: Partial<Skill>): Promise<Skill> {
-    try {
-      const { data, error } = await supabase
-        .from('skills')
-        .update(updates)
-        .eq('id', skillId)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      handleSupabaseError(error);
-      throw error;
-    }
-  }
-
-  async deleteSkill(skillId: string): Promise<void> {
-    try {
-      const { error } = await supabase
-        .from('skills')
-        .delete()
-        .eq('id', skillId);
-
-      if (error) throw error;
-    } catch (error) {
-      handleSupabaseError(error);
-    }
-  }
-
   // Public CV access
   async getPublicCV(publicUrl: string): Promise<CV & { sections: CVSection[] }> {
     try {
@@ -474,6 +218,67 @@ class CVService {
       handleSupabaseError(error);
       return [];
     }
+  }
+
+  // Placeholder methods for future AI features
+  async optimizeForRole(request: {
+    cvId: string;
+    jobDescription: string;
+    preserveOriginal?: boolean;
+  }): Promise<any> {
+    // Placeholder for AI optimization
+    console.log('AI optimization not yet implemented');
+    return {
+      optimizationId: 'placeholder',
+      changes: [],
+      keywordsHighlighted: [],
+      score: 0,
+      estimatedImpact: 'AI optimization coming soon',
+      suggestions: []
+    };
+  }
+
+  async scanSkills(request: {
+    sources: any;
+    existingSkills?: string[];
+  }): Promise<any> {
+    // Placeholder for skills scanning
+    console.log('Skills scanning not yet implemented');
+    return {
+      scanId: 'placeholder',
+      detectedSkills: [],
+      skillCategories: [],
+      recommendations: []
+    };
+  }
+
+  async createVersion(request: {
+    cvId: string;
+    title: string;
+    description?: string;
+    templateId?: string;
+    changes: string[];
+  }): Promise<any> {
+    // Placeholder for version control
+    console.log('Version control not yet implemented');
+    return {
+      versionId: 'placeholder',
+      version: 1,
+      comparisonUrl: ''
+    };
+  }
+
+  async getCVVersions(cvId: string): Promise<any[]> {
+    // Placeholder for version history
+    console.log('Version history not yet implemented');
+    return [];
+  }
+
+  async applyOptimization(cvId: string, optimizationId: string): Promise<CV> {
+    // Placeholder for applying optimizations
+    console.log('Apply optimization not yet implemented');
+    const cv = await this.getCV(cvId);
+    return cv;
   }
 }
 

@@ -14,28 +14,21 @@ import {
   Link as LinkIcon,
   Code
 } from 'lucide-react';
-import { CV, CVSection } from '../../types/cv';
 import { cvService } from '../../services/cvService';
 import { Button } from '../ui/Button';
 import { Card, CardContent, CardHeader } from '../ui/Card';
 import { CVSectionEditor } from './CVSectionEditor';
-import { SkillsRadar } from './SkillsRadar';
-import { OptimizeForRole } from './OptimizeForRole';
-import { VersionControl } from './VersionControl';
 import { CVPreview } from './CVPreview';
 import { EphemeralLinksManager } from '../privacy/EphemeralLinksManager';
 
 export function CVBuilder() {
   const { cvId } = useParams<{ cvId: string }>();
   const navigate = useNavigate();
-  const [cv, setCV] = useState<CV | null>(null);
-  const [activeSection, setActiveSection] = useState<string>('personal_info');
+  const [cv, setCV] = useState(null);
+  const [activeSection, setActiveSection] = useState('personal_info');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
-  const [showOptimizer, setShowOptimizer] = useState(false);
-  const [showVersions, setShowVersions] = useState(false);
-  const [showSkillsRadar, setShowSkillsRadar] = useState(false);
   const [showEphemeralLinks, setShowEphemeralLinks] = useState(false);
 
   useEffect(() => {
@@ -69,7 +62,7 @@ export function CVBuilder() {
     }
   };
 
-  const handleSectionUpdate = (sectionId: string, updates: Partial<CVSection>) => {
+  const handleSectionUpdate = (sectionId: string, updates: any) => {
     if (!cv) return;
     
     setCV(prev => ({
@@ -77,26 +70,7 @@ export function CVBuilder() {
       sections: prev!.sections.map(section =>
         section.id === sectionId ? { ...section, ...updates } : section
       ),
-      updatedAt: new Date().toISOString()
-    }));
-  };
-
-  const addSection = (type: string) => {
-    if (!cv) return;
-    
-    const newSection: CVSection = {
-      id: `section_${Date.now()}`,
-      type: type as any,
-      title: type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
-      content: {},
-      order: cv.sections.length,
-      isVisible: true,
-      aiOptimized: false
-    };
-    
-    setCV(prev => ({
-      ...prev!,
-      sections: [...prev!.sections, newSection]
+      updated_at: new Date().toISOString()
     }));
   };
 
@@ -158,7 +132,7 @@ export function CVBuilder() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setShowSkillsRadar(true)}
+                onClick={() => console.log('Skills radar coming soon')}
               >
                 <Sparkles className="h-4 w-4 mr-1" />
                 Skills Radar
@@ -167,7 +141,7 @@ export function CVBuilder() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setShowOptimizer(true)}
+                onClick={() => console.log('Optimization coming soon')}
               >
                 <Zap className="h-4 w-4 mr-1" />
                 Optimize
@@ -176,7 +150,7 @@ export function CVBuilder() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setShowVersions(true)}
+                onClick={() => console.log('Version control coming soon')}
               >
                 <GitBranch className="h-4 w-4 mr-1" />
                 Versions
@@ -230,7 +204,7 @@ export function CVBuilder() {
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-medium">{section.title}</span>
-                      {section.aiOptimized && (
+                      {section.ai_optimized && (
                         <Sparkles className="h-4 w-4 text-yellow-500" />
                       )}
                     </div>
@@ -241,7 +215,7 @@ export function CVBuilder() {
                   variant="outline"
                   size="sm"
                   className="w-full mt-4"
-                  onClick={() => {/* Add section modal */}}
+                  onClick={() => console.log('Add section coming soon')}
                 >
                   <Plus className="h-4 w-4 mr-1" />
                   Add Section
@@ -290,32 +264,6 @@ export function CVBuilder() {
         <CVPreview
           cv={cv}
           onClose={() => setShowPreview(false)}
-        />
-      )}
-      
-      {showOptimizer && (
-        <OptimizeForRole
-          cv={cv}
-          onClose={() => setShowOptimizer(false)}
-          onOptimized={(optimizedCV) => setCV(optimizedCV)}
-        />
-      )}
-      
-      {showVersions && (
-        <VersionControl
-          cv={cv}
-          onClose={() => setShowVersions(false)}
-          onVersionSelected={(version) => {/* Load version */}}
-        />
-      )}
-      
-      {showSkillsRadar && (
-        <SkillsRadar
-          cv={cv}
-          onClose={() => setShowSkillsRadar(false)}
-          onSkillsUpdated={(skillsData) => {
-            setCV(prev => ({ ...prev!, skillsRadar: skillsData }));
-          }}
         />
       )}
       
