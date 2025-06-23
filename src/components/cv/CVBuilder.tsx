@@ -21,7 +21,7 @@ import { Input } from '../ui/Input';
 import { Card, CardContent, CardHeader } from '../ui/Card';
 import { CVSectionEditor } from './CVSectionEditor';
 import { CVPreview } from './CVPreview';
-import { EphemeralLinksManager } from '../privacy/EphemeralLinksManager';
+import { EnhancedEphemeralLinksManager } from '../privacy/EnhancedEphemeralLinksManager';
 
 export function CVBuilder() {
   const { cvId } = useParams<{ cvId: string }>();
@@ -322,7 +322,7 @@ export function CVBuilder() {
               </Button>
             </div>
             <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
-              <EphemeralLinksManager cvId={cv.id} />
+              <EnhancedEphemeralLinksManager cvId={cv.id} />
             </div>
           </div>
         </div>
