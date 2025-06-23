@@ -15,6 +15,8 @@ import { ChallengesPage } from './pages/ChallengesPage';
 import { SyndicationPage } from './pages/SyndicationPage';
 import { WidgetPage } from './pages/WidgetPage';
 import { EnterprisePage } from './pages/EnterprisePage';
+import { PublicCVViewPage } from './pages/PublicCVViewPage';
+import { WidgetViewPage } from './pages/WidgetViewPage';
 
 function AppRoutes() {
   const { user, supabaseUser, isLoading } = useAuth();
@@ -131,11 +133,23 @@ function AppRoutes() {
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <AppRoutes />
-      </Router>
-    </AuthProvider>
+    <Router>
+      {/* Public routes that don't require authentication */}
+      <Routes>
+        {/* Ephemeral CV link - publicly accessible */}
+        <Route path="/cv/ephemeral/:accessToken" element={<PublicCVViewPage />} />
+        
+        {/* Widget view - publicly accessible */}
+        <Route path="/widget/cv/:cvId" element={<WidgetViewPage />} />
+        
+        {/* All other routes require authentication context */}
+        <Route path="/*" element={
+          <AuthProvider>
+            <AppRoutes />
+          </AuthProvider>
+        } />
+      </Routes>
+    </Router>
   );
 }
 
