@@ -172,8 +172,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       
     } catch (error) {
       console.error('💥 login: Exception during login:', error);
-      setIsLoading(false);
       handleSupabaseError(error);
+    } finally {
+      // CRITICAL FIX: Always set loading to false regardless of success or failure
+      setIsLoading(false);
     }
   };
 
