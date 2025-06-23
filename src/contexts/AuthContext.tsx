@@ -102,9 +102,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     console.log('👤 loadUserProfile: Loading profile for user:', userId);
     
     try {
-      // Create a timeout promise to prevent hanging
+      // Create a timeout promise to prevent hanging - increased to 30 seconds
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Profile loading timeout')), 10000); // 10 second timeout
+        setTimeout(() => reject(new Error('Profile loading timeout')), 30000); // 30 second timeout
       });
 
       // Race between the actual query and the timeout
@@ -246,7 +246,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Step 2: Immediately set the Supabase user in state
       setSupabaseUser(authData.user);
       
-      // Step 3: Create user profile in our database
+      // Step 3: Create user profile in our database using upsert
       console.log('📡 register: Creating user profile in database...');
       const profileData = {
         id: authData.user.id,
@@ -257,11 +257,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
         company_name: userData.companyName || null,
       };
       
-      console.log('📋 register: Profile data to insert:', profileData);
+      console.log('📋 register: Profile data to upsert:', profileData);
       
       const { data: profileResult, error: profileError } = await supabase
         .from('users')
-        .insert(profileData)
+        .upsert(profileData, { onConflict: 'id' })
         .select()
         .single();
 
@@ -342,51 +342,31 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       setIsLoading(true);
       
-      // If this is a new profile creation (user exists but no profile), use insert instead of update
-      if (!user) {
-        console.log('📡 updateProfile: Creating new profile (insert)...');
-        const { data, error } = await supabase
-          .from('users')
-          .insert({
-            id: supabaseUser.id,
-            email: supabaseUser.email || '',
-            ...updates
-          })
-          .select()
-          .single();
+      // Use upsert to handle both creation and updates robustly
+      console.log('📡 updateProfile: Upserting profile...');
+      const profileData = {
+        id: supabaseUser.id,
+        email: supabaseUser.email || '',
+        ...updates
+      };
+      
+      const { data, error } = await supabase
+        .from('users')
+        .upsert(profileData, { onConflict: 'id' })
+        .select()
+        .single();
 
-        if (error) {
-          console.error('❌ updateProfile: Insert failed:', error);
-          throw error;
-        }
-        
-        if (!data) {
-          throw new Error('Profile creation returned no data');
-        }
-        
-        console.log('✅ updateProfile: Profile created successfully');
-        setUser(data);
-      } else {
-        console.log('📡 updateProfile: Updating existing profile...');
-        const { data, error } = await supabase
-          .from('users')
-          .update(updates)
-          .eq('id', supabaseUser.id)
-          .select()
-          .single();
-
-        if (error) {
-          console.error('❌ updateProfile: Update failed:', error);
-          throw error;
-        }
-        
-        if (!data) {
-          throw new Error('Profile update returned no data');
-        }
-        
-        console.log('✅ updateProfile: Profile updated successfully');
-        setUser(data);
+      if (error) {
+        console.error('❌ updateProfile: Upsert failed:', error);
+        throw error;
       }
+      
+      if (!data) {
+        throw new Error('Profile upsert returned no data');
+      }
+      
+      console.log('✅ updateProfile: Profile upserted successfully');
+      setUser(data);
       
     } catch (error) {
       console.error('💥 updateProfile: Exception during update:', error);
