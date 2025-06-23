@@ -122,3 +122,14 @@ export interface LinkAccess {
   userAgent: string;
   action: 'view' | 'download';
 }
+
+// Widget Configuration
+export interface WidgetConfig {
+  theme: 'light' | 'dark' | 'auto';
+  size: 'small' | 'medium' | 'large';
+  sections: string[];
+  showPhoto: boolean;
+  showContact: boolean;
+  customCSS: string;
+  autoUpdate: boolean;
+}

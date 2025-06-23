@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { EphemeralLink } from '../../types';
 import { syndicationService } from '../../services/syndicationService';
+import { hashSha256Base64 } from '../../lib/utils';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui/Button';
 import { Card, CardContent, CardHeader } from '../ui/Card';

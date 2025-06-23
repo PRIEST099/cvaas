@@ -1,4 +1,5 @@
 import { supabase, handleSupabaseError, getCurrentUser } from '../lib/supabase';
+import { hashSha256Base64 } from '../lib/utils';
 import { EphemeralLink, LinkAccess } from '../types';
 
 class SyndicationService {
@@ -59,6 +60,12 @@ class SyndicationService {
       
       const accessToken = `ephemeral_${Math.random().toString(36).substring(2)}_${Date.now()}`;
 
+      // Hash password using SHA256 if provided
+      let passwordHash = null;
+      if (options.requirePassword && options.password) {
+        passwordHash = await hashSha256Base64(options.password);
+      }
+
       const { data, error } = await supabase
         .from('ephemeral_links')
         .insert({
@@ -70,7 +77,7 @@ class SyndicationService {
           current_views: 0,
           allow_download: options.allowDownload || false,
           require_password: options.requirePassword || false,
-          password_hash: options.password ? btoa(options.password) : null,
+          password_hash: passwordHash,
           is_active: true
         })
         .select()

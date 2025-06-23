@@ -15,6 +15,7 @@ import { SyndicationPage } from './pages/SyndicationPage';
 import { WidgetPage } from './pages/WidgetPage';
 import { EnterprisePage } from './pages/EnterprisePage';
 import { PublicCVViewPage } from './pages/PublicCVViewPage';
+import { WidgetViewPage } from './pages/WidgetViewPage';
 
 function AppRoutes() {
   const { user } = useAuth();
@@ -28,6 +29,9 @@ function AppRoutes() {
       
       {/* Public CV viewing via ephemeral links */}
       <Route path="/cv/ephemeral/:accessToken" element={<PublicCVViewPage />} />
+      
+      {/* Public widget view (no authentication required) */}
+      <Route path="/widget/cv/:cvId" element={<WidgetViewPage />} />
       
       {/* Protected routes */}
       <Route
