@@ -275,14 +275,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       
     } catch (error) {
       console.error('💥 register: Exception during registration:', error);
-      setIsLoading(false);
       throw error; // Re-throw the error so the UI can handle it properly
     } finally {
-      // Only set loading to false if we haven't successfully registered
-      // (successful registration will trigger auth state change which handles loading)
-      if (!user) {
-        setIsLoading(false);
-      }
+      // CRITICAL FIX: Always set loading to false regardless of success or failure
+      setIsLoading(false);
     }
   };
 
