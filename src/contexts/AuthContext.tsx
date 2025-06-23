@@ -84,13 +84,35 @@ export function AuthProvider({ children }: AuthProviderProps) {
       console.log('🔔 AuthProvider: Auth state changed', { 
         event, 
         userId: session?.user?.id,
-        sessionExists: !!session 
+        sessionExists: !!session,
+        currentUserInState: user?.id
       });
       
       if (session?.user) {
         console.log('✅ AuthProvider: User authenticated:', session.user.id);
         setSupabaseUser(session.user);
-        await loadUserProfile(session.user.id);
+        
+        // Only load user profile if:
+        // 1. It's a SIGNED_IN or SIGNED_UP event (new authentication), OR
+        // 2. We don't have a user profile in state, OR  
+        // 3. The user ID in state doesn't match the session user ID
+        const shouldLoadProfile = 
+          event === 'SIGNED_IN' || 
+          event === 'SIGNED_UP' || 
+          !user || 
+          user.id !== session.user.id;
+          
+        if (shouldLoadProfile) {
+          console.log('📥 AuthProvider: Loading user profile due to:', { 
+            event, 
+            hasUserInState: !!user, 
+            userIdMatch: user?.id === session.user.id 
+          });
+          await loadUserProfile(session.user.id);
+        } else {
+          console.log('⏭️ AuthProvider: Skipping profile load - user already loaded');
+          setIsLoading(false);
+        }
       } else {
         console.log('🚪 AuthProvider: User logged out or session ended');
         setSupabaseUser(null);
@@ -103,7 +125,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       console.log('🧹 AuthProvider: Cleaning up auth subscription');
       subscription.unsubscribe();
     };
-  }, []);
+  }, [user]); // Add user as dependency to access current user state
 
   const loadUserProfile = async (userId: string) => {
     console.log('👤 loadUserProfile: Loading profile for user:', userId);
