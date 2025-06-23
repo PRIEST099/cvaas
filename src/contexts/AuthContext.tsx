@@ -109,8 +109,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     console.log('👤 loadUserProfile: Loading profile for user:', userId);
     
     try {
-      // Create a timeout promise that rejects after 5 seconds
-      const timeoutPromise = createTimeoutPromise(5000, 'Profile loading timeout');
+      // Create a timeout promise that rejects after 10 seconds (increased from 5 seconds)
+      const timeoutPromise = createTimeoutPromise(10000, 'Profile loading timeout');
       
       // Race the database query against the timeout
       const queryPromise = supabase
