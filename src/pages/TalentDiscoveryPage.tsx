@@ -39,7 +39,7 @@ export function TalentDiscoveryPage() {
   }, [user]);
 
   const loadSmartPools = async () => {
-    if (!user?.company_name) return;
+    if (!user?.id) return;
     
     try {
       setIsLoadingPools(true);

@@ -74,8 +74,6 @@ class SyndicationService {
   // Ephemeral Links
   async getEphemeralLinks(userId: string): Promise<EphemeralLink[]> {
     try {
-      await this.delay();
-      
       const { data, error } = await supabase
         .from('ephemeral_links')
         .select(`
@@ -128,7 +126,7 @@ class SyndicationService {
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + options.expiresIn);
       
-      const accessToken = `ephemeral_${Math.random().toString(36).substring(2)}`;
+      const accessToken = `ephemeral_${Math.random().toString(36).substring(2)}_${Date.now()}`;
 
       const { data, error } = await supabase
         .from('ephemeral_links')
@@ -166,6 +164,48 @@ class SyndicationService {
     } catch (error) {
       handleSupabaseError(error);
       throw error;
+    }
+  }
+
+  async accessEphemeralLink(accessToken: string, password?: string): Promise<{
+    success: boolean;
+    cv?: any;
+    link?: any;
+    error?: string;
+  }> {
+    try {
+      const { data, error } = await supabase.rpc('access_ephemeral_link', {
+        token: accessToken,
+        password_input: password,
+        ip_addr: null, // Could be populated from request headers
+        user_agent_input: navigator.userAgent
+      });
+
+      if (error) throw error;
+
+      return data;
+    } catch (error) {
+      console.error('Failed to access ephemeral link:', error);
+      return {
+        success: false,
+        error: 'Failed to access link'
+      };
+    }
+  }
+
+  async logEphemeralDownload(accessToken: string): Promise<boolean> {
+    try {
+      const { data, error } = await supabase.rpc('log_ephemeral_download', {
+        token: accessToken,
+        ip_addr: null,
+        user_agent_input: navigator.userAgent
+      });
+
+      if (error) throw error;
+      return data || false;
+    } catch (error) {
+      console.error('Failed to log download:', error);
+      return false;
     }
   }
 

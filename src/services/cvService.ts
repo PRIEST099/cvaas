@@ -6,6 +6,18 @@ type CVInsert = Database['public']['Tables']['cvs']['Insert'];
 type CVUpdate = Database['public']['Tables']['cvs']['Update'];
 type CVSection = Database['public']['Tables']['cv_sections']['Row'];
 type CVSectionInsert = Database['public']['Tables']['cv_sections']['Insert'];
+type Education = Database['public']['Tables']['education']['Row'];
+type Experience = Database['public']['Tables']['experience']['Row'];
+type Project = Database['public']['Tables']['projects']['Row'];
+type Skill = Database['public']['Tables']['skills']['Row'];
+
+interface CVWithContent extends CV {
+  sections: CVSection[];
+  education: Education[];
+  experience: Experience[];
+  projects: Project[];
+  skills: Skill[];
+}
 
 class CVService {
   // CV Management
@@ -30,14 +42,18 @@ class CVService {
     }
   }
 
-  async getCV(cvId: string): Promise<CV & { sections: CVSection[] }> {
+  async getCV(cvId: string): Promise<CVWithContent> {
     try {
-      // Get CV with sections
+      // Get CV with all related content
       const { data: cv, error: cvError } = await supabase
         .from('cvs')
         .select(`
           *,
-          cv_sections (*)
+          cv_sections (*),
+          education (*),
+          experience (*),
+          projects (*),
+          skills (*)
         `)
         .eq('id', cvId)
         .single();
@@ -47,7 +63,11 @@ class CVService {
 
       return {
         ...cv,
-        sections: cv.cv_sections || []
+        sections: cv.cv_sections || [],
+        education: cv.education || [],
+        experience: cv.experience || [],
+        projects: cv.projects || [],
+        skills: cv.skills || []
       };
     } catch (error) {
       handleSupabaseError(error);
@@ -168,14 +188,206 @@ class CVService {
     }
   }
 
+  // Education Management
+  async addEducation(cvId: string, education: Omit<Education, 'id' | 'cv_id' | 'created_at' | 'updated_at'>): Promise<Education> {
+    try {
+      const { data, error } = await supabase
+        .from('education')
+        .insert({ ...education, cv_id: cvId })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      handleSupabaseError(error);
+      throw error;
+    }
+  }
+
+  async updateEducation(educationId: string, updates: Partial<Education>): Promise<Education> {
+    try {
+      const { data, error } = await supabase
+        .from('education')
+        .update(updates)
+        .eq('id', educationId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      handleSupabaseError(error);
+      throw error;
+    }
+  }
+
+  async deleteEducation(educationId: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('education')
+        .delete()
+        .eq('id', educationId);
+
+      if (error) throw error;
+    } catch (error) {
+      handleSupabaseError(error);
+    }
+  }
+
+  // Experience Management
+  async addExperience(cvId: string, experience: Omit<Experience, 'id' | 'cv_id' | 'created_at' | 'updated_at'>): Promise<Experience> {
+    try {
+      const { data, error } = await supabase
+        .from('experience')
+        .insert({ ...experience, cv_id: cvId })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      handleSupabaseError(error);
+      throw error;
+    }
+  }
+
+  async updateExperience(experienceId: string, updates: Partial<Experience>): Promise<Experience> {
+    try {
+      const { data, error } = await supabase
+        .from('experience')
+        .update(updates)
+        .eq('id', experienceId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      handleSupabaseError(error);
+      throw error;
+    }
+  }
+
+  async deleteExperience(experienceId: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('experience')
+        .delete()
+        .eq('id', experienceId);
+
+      if (error) throw error;
+    } catch (error) {
+      handleSupabaseError(error);
+    }
+  }
+
+  // Project Management
+  async addProject(cvId: string, project: Omit<Project, 'id' | 'cv_id' | 'created_at' | 'updated_at'>): Promise<Project> {
+    try {
+      const { data, error } = await supabase
+        .from('projects')
+        .insert({ ...project, cv_id: cvId })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      handleSupabaseError(error);
+      throw error;
+    }
+  }
+
+  async updateProject(projectId: string, updates: Partial<Project>): Promise<Project> {
+    try {
+      const { data, error } = await supabase
+        .from('projects')
+        .update(updates)
+        .eq('id', projectId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      handleSupabaseError(error);
+      throw error;
+    }
+  }
+
+  async deleteProject(projectId: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .delete()
+        .eq('id', projectId);
+
+      if (error) throw error;
+    } catch (error) {
+      handleSupabaseError(error);
+    }
+  }
+
+  // Skills Management
+  async addSkill(cvId: string, skill: Omit<Skill, 'id' | 'cv_id' | 'created_at' | 'updated_at'>): Promise<Skill> {
+    try {
+      const { data, error } = await supabase
+        .from('skills')
+        .insert({ ...skill, cv_id: cvId })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      handleSupabaseError(error);
+      throw error;
+    }
+  }
+
+  async updateSkill(skillId: string, updates: Partial<Skill>): Promise<Skill> {
+    try {
+      const { data, error } = await supabase
+        .from('skills')
+        .update(updates)
+        .eq('id', skillId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      handleSupabaseError(error);
+      throw error;
+    }
+  }
+
+  async deleteSkill(skillId: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('skills')
+        .delete()
+        .eq('id', skillId);
+
+      if (error) throw error;
+    } catch (error) {
+      handleSupabaseError(error);
+    }
+  }
+
   // Public CV access
-  async getPublicCV(publicUrl: string): Promise<CV & { sections: CVSection[] }> {
+  async getPublicCV(publicUrl: string): Promise<CVWithContent> {
     try {
       const { data: cv, error } = await supabase
         .from('cvs')
         .select(`
           *,
-          cv_sections (*)
+          cv_sections (*),
+          education (*),
+          experience (*),
+          projects (*),
+          skills (*)
         `)
         .eq('public_url', publicUrl)
         .eq('is_public', true)
@@ -186,7 +398,11 @@ class CVService {
 
       return {
         ...cv,
-        sections: cv.cv_sections || []
+        sections: cv.cv_sections || [],
+        education: cv.education || [],
+        experience: cv.experience || [],
+        projects: cv.projects || [],
+        skills: cv.skills || []
       };
     } catch (error) {
       handleSupabaseError(error);

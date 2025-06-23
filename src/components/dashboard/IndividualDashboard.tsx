@@ -167,8 +167,18 @@ export function IndividualDashboard() {
               <div key={submission.id} className="p-4 border border-gray-200 rounded-lg">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <h3 className="font-medium text-gray-900">Quest Submission</h3>
+                    <h3 className="font-medium text-gray-900">
+                      {submission.quests?.title || 'Quest Submission'}
+                    </h3>
                     <p className="text-sm text-gray-600 mt-1">
+                      {submission.quests?.category && (
+                        <span className="capitalize">{submission.quests.category}</span>
+                      )}
+                      {submission.quests?.difficulty && (
+                        <span className="ml-2 capitalize">• {submission.quests.difficulty}</span>
+                      )}
+                    </p>
+                    <p className="text-sm text-gray-500 mt-1">
                       Submitted {new Date(submission.submitted_at).toLocaleDateString()}
                     </p>
                   </div>

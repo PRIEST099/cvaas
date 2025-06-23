@@ -9,7 +9,8 @@ import {
   BarChart3,
   Target,
   TrendingUp,
-  Clock
+  Clock,
+  Users
 } from 'lucide-react';
 import { questService } from '../services/questService';
 import { useAuth } from '../contexts/AuthContext';
