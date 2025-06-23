@@ -41,16 +41,16 @@ export function EmbeddableCVRenderer({ cv, widgetConfig, className = '' }: Embed
   };
 
   const renderSection = (section: any) => {
-    if (!section || !section.is_visible || !config.sections.includes(section.section_type)) return null;
+    if (!section.is_visible || !config.sections.includes(section.section_type)) return null;
 
     switch (section.section_type) {
       case 'personal_info':
         return (
           <div className="text-center mb-8 pb-8 border-b border-gray-200 dark:border-gray-700">
             <h1 className="text-4xl font-bold mb-2">
-              {section.content?.fullName || 'Your Name'}
+              {section.content.fullName || 'Your Name'}
             </h1>
-            {section.content?.title && (
+            {section.content.title && (
               <h2 className="text-xl text-blue-600 dark:text-blue-400 font-medium mb-4">
                 {section.content.title}
               </h2>
@@ -58,19 +58,19 @@ export function EmbeddableCVRenderer({ cv, widgetConfig, className = '' }: Embed
             
             {config.showContact && (
               <div className="flex flex-wrap justify-center gap-4 text-gray-600 dark:text-gray-300 mb-4">
-                {section.content?.email && (
+                {section.content.email && (
                   <div className="flex items-center">
                     <Mail className="h-4 w-4 mr-2" />
                     <span>{section.content.email}</span>
                   </div>
                 )}
-                {section.content?.phone && (
+                {section.content.phone && (
                   <div className="flex items-center">
                     <Phone className="h-4 w-4 mr-2" />
                     <span>{section.content.phone}</span>
                   </div>
                 )}
-                {section.content?.location && (
+                {section.content.location && (
                   <div className="flex items-center">
                     <MapPin className="h-4 w-4 mr-2" />
                     <span>{section.content.location}</span>
@@ -80,19 +80,19 @@ export function EmbeddableCVRenderer({ cv, widgetConfig, className = '' }: Embed
             )}
             
             <div className="flex flex-wrap justify-center gap-4">
-              {section.content?.linkedin && (
+              {section.content.linkedin && (
                 <a href={section.content.linkedin} className="flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors">
                   <Linkedin className="h-4 w-4 mr-2" />
                   LinkedIn
                 </a>
               )}
-              {section.content?.website && (
+              {section.content.website && (
                 <a href={section.content.website} className="flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors">
                   <Globe className="h-4 w-4 mr-2" />
                   Website
                 </a>
               )}
-              {section.content?.github && (
+              {section.content.github && (
                 <a href={section.content.github} className="flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors">
                   <Github className="h-4 w-4 mr-2" />
                   GitHub
@@ -110,7 +110,7 @@ export function EmbeddableCVRenderer({ cv, widgetConfig, className = '' }: Embed
               Professional Summary
             </h2>
             <p className="text-gray-700 dark:text-gray-300 leading-relaxed text-lg">
-              {section.content?.summary || 'Your professional summary will appear here...'}
+              {section.content.summary || 'Your professional summary will appear here...'}
             </p>
           </div>
         );
@@ -320,35 +320,24 @@ export function EmbeddableCVRenderer({ cv, widgetConfig, className = '' }: Embed
     );
   };
 
-  // Render sections from CV sections data
-  const renderSectionsFromData = () => {
-    if (!cv.sections || cv.sections.length === 0) return null;
-
-    return cv.sections
-      .filter((section: any) => section.is_visible && config.sections.includes(section.section_type))
-      .sort((a: any, b: any) => a.display_order - b.display_order)
-      .map((section: any) => (
-        <div key={section.id}>
-          {renderSection(section)}
-        </div>
-      ));
-  };
-
   return (
     <div 
-      className={`${themeClasses[config.theme]} ${sizeClasses[config.size]} ${className} p-6`}
+      className={`${themeClasses[config.theme]} ${sizeClasses[config.size]} ${className}`}
       style={config.customCSS ? { cssText: config.customCSS } : undefined}
     >
-      {/* Render sections from CV sections data */}
-      {renderSectionsFromData()}
+      {cv.sections
+        ?.sort((a: any, b: any) => a.display_order - b.display_order)
+        .map((section: any) => (
+          <div key={section.id}>
+            {renderSection(section)}
+          </div>
+        ))}
       
-      {/* Render additional content from separate tables */}
       {renderExperience()}
       {renderEducation()}
       {renderSkills()}
       {renderProjects()}
       
-      {/* Empty state */}
       {(!cv.sections || cv.sections.length === 0) && 
        (!cv.experience || cv.experience.length === 0) &&
        (!cv.education || cv.education.length === 0) &&
