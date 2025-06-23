@@ -38,13 +38,6 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-// Helper function to create a timeout promise
-function createTimeoutPromise(ms: number, errorMessage: string) {
-  return new Promise((_, reject) => {
-    setTimeout(() => reject(new Error(errorMessage)), ms);
-  });
-}
-
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null);
@@ -109,17 +102,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     console.log('👤 loadUserProfile: Loading profile for user:', userId);
     
     try {
-      // Create a timeout promise that rejects after 8 seconds
-      const timeoutPromise = createTimeoutPromise(8000, 'Profile loading timeout');
-      
-      // Race the database query against the timeout
-      const queryPromise = supabase
+      const { data, error } = await supabase
         .from('users')
         .select('*')
         .eq('id', userId)
         .single();
-
-      const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
 
       console.log('📊 loadUserProfile: Query result', { 
         profileFound: !!data, 
@@ -182,15 +169,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       
       console.log('📡 login: Calling supabase.auth.signInWithPassword...');
       
-      // Create a timeout promise for the login request
-      const timeoutPromise = createTimeoutPromise(10000, 'Login request timeout');
-      
-      const loginPromise = supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
-
-      const { data, error } = await Promise.race([loginPromise, timeoutPromise]);
 
       console.log('📊 login: SignIn response', { 
         userExists: !!data.user, 
@@ -237,15 +219,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Step 1: Sign up the user with Supabase Auth
       console.log('📡 register: Calling supabase.auth.signUp...');
       
-      // Create a timeout promise for the signup request
-      const timeoutPromise = createTimeoutPromise(10000, 'Registration request timeout');
-      
-      const signupPromise = supabase.auth.signUp({
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email: userData.email,
         password: userData.password,
       });
-
-      const { data: authData, error: authError } = await Promise.race([signupPromise, timeoutPromise]);
 
       console.log('📊 register: SignUp response', { 
         userExists: !!authData.user, 
@@ -288,16 +265,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
       
       console.log('📋 register: Profile data to upsert:', profileData);
       
-      // Create a timeout promise for the profile creation
-      const profileTimeoutPromise = createTimeoutPromise(10000, 'Profile creation timeout');
-      
-      const profilePromise = supabase
+      const { data: profileResult, error: profileError } = await supabase
         .from('users')
         .upsert(profileData, { onConflict: 'id' })
         .select()
         .single();
-
-      const { data: profileResult, error: profileError } = await Promise.race([profilePromise, profileTimeoutPromise]);
 
       console.log('📊 register: Profile creation result', { 
         profileCreated: !!profileResult, 
@@ -343,12 +315,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       setIsLoading(true);
       
-      // Create a timeout promise for the logout request
-      const timeoutPromise = createTimeoutPromise(5000, 'Logout request timeout');
-      
-      const logoutPromise = supabase.auth.signOut();
-
-      const { error } = await Promise.race([logoutPromise, timeoutPromise]);
+      const { error } = await supabase.auth.signOut();
       
       if (error) {
         console.error('❌ logout: Error during logout:', error);
@@ -389,16 +356,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
         ...updates
       };
       
-      // Create a timeout promise for the profile update
-      const timeoutPromise = createTimeoutPromise(10000, 'Profile update timeout');
-      
-      const updatePromise = supabase
+      const { data, error } = await supabase
         .from('users')
         .upsert(profileData, { onConflict: 'id' })
         .select()
         .single();
-
-      const { data, error } = await Promise.race([updatePromise, timeoutPromise]);
 
       if (error) {
         console.error('❌ updateProfile: Upsert failed:', error);
