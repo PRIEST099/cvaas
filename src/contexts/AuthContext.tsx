@@ -117,12 +117,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (error) {
         if (error.code === 'PGRST116') {
           console.log('ℹ️ loadUserProfile: User profile not found (new user), this is normal for fresh registrations');
-          // Explicitly set user to null when profile is not found
+          // For new users without profiles, don't set loading to false here
+          // Let the register function handle the loading state
           setUser(null);
         } else {
           console.error('❌ loadUserProfile: Error loading profile:', error);
-          // Set user to null for any other error as well
           setUser(null);
+          setIsLoading(false);
           throw error;
         }
       } else if (data) {
@@ -133,18 +134,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
           firstName: data.first_name
         });
         setUser(data);
+        setIsLoading(false);
       } else {
         // Handle case where no error but also no data
         console.log('ℹ️ loadUserProfile: No profile data returned');
         setUser(null);
+        setIsLoading(false);
       }
     } catch (error) {
       console.error('💥 loadUserProfile: Exception occurred:', error);
-      // Explicitly set user to null on any exception
       setUser(null);
-      // Don't throw here to prevent auth flow interruption
-    } finally {
-      // CRITICAL: Always set loading to false
       setIsLoading(false);
     }
   };
@@ -182,11 +181,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       
     } catch (error) {
       console.error('💥 login: Exception during login:', error);
-      handleSupabaseError(error);
-      throw error; // Re-throw to allow UI to handle the error
-    } finally {
-      // CRITICAL FIX: Always set loading to false regardless of success or failure
       setIsLoading(false);
+      handleSupabaseError(error);
+      throw error;
     }
   };
 
@@ -283,15 +280,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
       
       // Step 4: Immediately set the user profile in state for auto-login
       setUser(profileResult);
+      setIsLoading(false);
       
       console.log('🎉 register: Registration completed successfully - user is now logged in');
       
     } catch (error) {
       console.error('💥 register: Exception during registration:', error);
-      throw error; // Re-throw the error so the UI can handle it properly
-    } finally {
-      // CRITICAL FIX: Always set loading to false regardless of success or failure
       setIsLoading(false);
+      throw error;
     }
   };
 
