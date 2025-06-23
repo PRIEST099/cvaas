@@ -109,8 +109,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     console.log('👤 loadUserProfile: Loading profile for user:', userId);
     
     try {
-      // Create a timeout promise that rejects after 5 seconds
-      const timeoutPromise = createTimeoutPromise(5000, 'Profile loading timeout');
+      // Create a timeout promise that rejects after 8 seconds
+      const timeoutPromise = createTimeoutPromise(8000, 'Profile loading timeout');
       
       // Race the database query against the timeout
       const queryPromise = supabase
@@ -143,9 +143,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
           id: data.id,
           email: data.email,
           role: data.role,
-          firstName: data.first_name
+          firstName: data.first_name,
+          hasFirstName: !!data.first_name,
+          hasLastName: !!data.last_name
         });
-        setUser(data);
+        
+        // Check if profile is actually complete
+        const isProfileComplete = !!(data.first_name && data.last_name && data.role);
+        
+        if (isProfileComplete) {
+          console.log('✅ loadUserProfile: Profile is complete, setting user');
+          setUser(data);
+        } else {
+          console.log('⚠️ loadUserProfile: Profile exists but is incomplete, keeping user null');
+          setUser(null);
+        }
       } else {
         // Handle case where no error but also no data
         console.log('ℹ️ loadUserProfile: No profile data returned');
@@ -424,7 +436,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     hasSupabaseUser: !!supabaseUser, 
     isLoading,
     userId: user?.id,
-    userRole: user?.role
+    userRole: user?.role,
+    userFirstName: user?.first_name,
+    userLastName: user?.last_name
   });
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

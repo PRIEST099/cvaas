@@ -30,8 +30,11 @@ function AppRoutes() {
     );
   }
 
-  // If user is authenticated in Supabase but doesn't have a profile, redirect to complete profile
-  if (supabaseUser && !user) {
+  // Only redirect to complete profile if user is authenticated but has incomplete profile
+  // Check for both existence and completeness of profile data
+  const needsProfileCompletion = supabaseUser && !user;
+
+  if (needsProfileCompletion) {
     return (
       <Layout>
         <Routes>
