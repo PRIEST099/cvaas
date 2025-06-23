@@ -134,9 +134,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
           setUser(null);
         } else {
           console.error('❌ loadUserProfile: Error loading profile:', error);
-          // Set user to null for any other error as well
+          // Set user to null for any other error as well - don't throw
           setUser(null);
-          throw error;
         }
       } else if (data) {
         console.log('✅ loadUserProfile: Profile loaded successfully:', {
@@ -153,9 +152,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
     } catch (error) {
       console.error('💥 loadUserProfile: Exception occurred:', error);
-      // Explicitly set user to null on any exception
+      // Explicitly set user to null on any exception - don't throw
       setUser(null);
-      // Don't throw here to prevent auth flow interruption
     } finally {
       // CRITICAL: Always set loading to false
       setIsLoading(false);
