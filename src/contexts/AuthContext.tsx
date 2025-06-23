@@ -156,7 +156,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       
       console.log('📡 login: Calling supabase.auth.signInWithPassword...');
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: email.trim().toLowerCase(), // Normalize email
         password,
       });
 
@@ -168,11 +168,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       if (error) {
         console.error('❌ login: Authentication failed:', error);
+        setIsLoading(false);
         throw error;
       }
 
       if (!data.user) {
         console.warn('⚠️ login: No user returned despite no error');
+        setIsLoading(false);
         throw new Error('Login failed: No user data received');
       }
 
@@ -203,8 +205,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Step 1: Sign up the user with Supabase Auth
       console.log('📡 register: Calling supabase.auth.signUp...');
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: userData.email,
+        email: userData.email.trim().toLowerCase(), // Normalize email
         password: userData.password,
+        options: {
+          emailRedirectTo: undefined, // Disable email confirmation
+        }
       });
 
       console.log('📊 register: SignUp response', { 
@@ -216,6 +221,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       if (authError) {
         console.error('❌ register: User signup failed:', authError);
+        setIsLoading(false);
         
         // Handle specific error cases with more helpful messages
         if (authError.code === 'user_already_exists') {
@@ -227,6 +233,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       if (!authData.user) {
         console.warn('⚠️ register: No user returned despite no error');
+        setIsLoading(false);
         throw new Error('Registration failed: No user data received');
       }
 
@@ -239,11 +246,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
       console.log('📡 register: Creating user profile in database...');
       const profileData = {
         id: authData.user.id,
-        email: userData.email,
+        email: userData.email.trim().toLowerCase(),
         role: userData.role,
-        first_name: userData.firstName,
-        last_name: userData.lastName,
-        company_name: userData.companyName || null,
+        first_name: userData.firstName.trim(),
+        last_name: userData.lastName.trim(),
+        company_name: userData.companyName?.trim() || null,
       };
       
       console.log('📋 register: Profile data to insert:', profileData);
@@ -263,12 +270,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
         console.error('❌ register: Profile creation failed:', profileError);
         // If profile creation fails, we should sign out the user to maintain consistency
         await supabase.auth.signOut();
+        setIsLoading(false);
         throw new Error(`Profile creation failed: ${profileError.message}`);
       }
 
       if (!profileResult) {
         console.error('❌ register: No profile data returned');
         await supabase.auth.signOut();
+        setIsLoading(false);
         throw new Error('Registration failed: Profile creation returned no data');
       }
 
