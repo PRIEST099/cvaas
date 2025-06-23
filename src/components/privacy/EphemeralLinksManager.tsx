@@ -10,7 +10,8 @@ import {
   Trash2,
   ExternalLink,
   Shield,
-  AlertTriangle
+  AlertTriangle,
+  Infinity
 } from 'lucide-react';
 import { EphemeralLink } from '../../types';
 import { syndicationService } from '../../services/syndicationService';
@@ -36,7 +37,8 @@ export function EphemeralLinksManager({ cvId }: EphemeralLinksManagerProps) {
     maxViews: undefined as number | undefined,
     allowDownload: false,
     requirePassword: false,
-    password: ''
+    password: '',
+    noExpiry: false
   });
 
   useEffect(() => {
@@ -62,7 +64,7 @@ export function EphemeralLinksManager({ cvId }: EphemeralLinksManagerProps) {
   const handleCreateLink = async () => {
     try {
       const link = await syndicationService.createEphemeralLink(cvId, {
-        expiresIn: newLink.expiresIn,
+        expiresIn: newLink.noExpiry ? Number.MAX_SAFE_INTEGER : newLink.expiresIn,
         maxViews: newLink.maxViews,
         allowDownload: newLink.allowDownload,
         requirePassword: newLink.requirePassword,
@@ -77,7 +79,8 @@ export function EphemeralLinksManager({ cvId }: EphemeralLinksManagerProps) {
         maxViews: undefined,
         allowDownload: false,
         requirePassword: false,
-        password: ''
+        password: '',
+        noExpiry: false
       });
     } catch (error) {
       console.error('Failed to create ephemeral link:', error);
@@ -113,6 +116,14 @@ export function EphemeralLinksManager({ cvId }: EphemeralLinksManagerProps) {
     const expires = new Date(expiresAt);
     const diff = expires.getTime() - now.getTime();
     
+    // Check if this is a "no expiry" link (more than 50 years in the future)
+    const fiftyYearsFromNow = new Date();
+    fiftyYearsFromNow.setFullYear(fiftyYearsFromNow.getFullYear() + 50);
+    
+    if (expires > fiftyYearsFromNow) {
+      return 'No expiry';
+    }
+    
     if (diff <= 0) return 'Expired';
     
     const hours = Math.floor(diff / (1000 * 60 * 60));
@@ -127,7 +138,18 @@ export function EphemeralLinksManager({ cvId }: EphemeralLinksManagerProps) {
   };
 
   const isLinkExpired = (expiresAt: string) => {
-    return new Date() > new Date(expiresAt);
+    const now = new Date();
+    const expires = new Date(expiresAt);
+    
+    // Check if this is a "no expiry" link
+    const fiftyYearsFromNow = new Date();
+    fiftyYearsFromNow.setFullYear(fiftyYearsFromNow.getFullYear() + 50);
+    
+    if (expires > fiftyYearsFromNow) {
+      return false; // Never expires
+    }
+    
+    return now > expires;
   };
 
   const isLinkViewLimitReached = (link: EphemeralLink) => {
@@ -139,6 +161,14 @@ export function EphemeralLinksManager({ cvId }: EphemeralLinksManagerProps) {
     if (isLinkExpired(link.expiresAt)) return { status: 'expired', color: 'red' };
     if (isLinkViewLimitReached(link)) return { status: 'limit reached', color: 'orange' };
     return { status: 'active', color: 'green' };
+  };
+
+  const handleNoExpiryChange = (checked: boolean) => {
+    setNewLink(prev => ({
+      ...prev,
+      noExpiry: checked,
+      expiresIn: checked ? Number.MAX_SAFE_INTEGER : 24
+    }));
   };
 
   if (isLoading) {
@@ -168,6 +198,8 @@ export function EphemeralLinksManager({ cvId }: EphemeralLinksManagerProps) {
         {links.map((link) => {
           const linkStatus = getLinkStatus(link);
           const isInactive = linkStatus.status !== 'active';
+          const timeRemaining = formatTimeRemaining(link.expiresAt);
+          const isNoExpiry = timeRemaining === 'No expiry';
           
           return (
             <Card key={link.id} className={`transition-all duration-300 ${isInactive ? 'opacity-70 bg-gray-50' : 'hover:shadow-lg'}`}>
@@ -182,6 +214,9 @@ export function EphemeralLinksManager({ cvId }: EphemeralLinksManagerProps) {
                       {link.requirePassword && (
                         <Lock className="h-4 w-4 text-yellow-500" />
                       )}
+                      {isNoExpiry && (
+                        <Infinity className="h-4 w-4 text-green-500" />
+                      )}
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                         linkStatus.color === 'green' ? 'bg-green-100 text-green-800' :
                         linkStatus.color === 'red' ? 'bg-red-100 text-red-800' :
@@ -195,10 +230,19 @@ export function EphemeralLinksManager({ cvId }: EphemeralLinksManagerProps) {
                     
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4">
                       <div className="flex items-center space-x-1">
-                        <Clock className="h-4 w-4 text-gray-400" />
-                        <span className={`text-gray-600 ${isLinkExpired(link.expiresAt) ? 'text-red-600 font-medium' : ''}`}>
-                          {formatTimeRemaining(link.expiresAt)}
-                        </span>
+                        {isNoExpiry ? (
+                          <>
+                            <Infinity className="h-4 w-4 text-green-500" />
+                            <span className="text-green-600 font-medium">No expiry</span>
+                          </>
+                        ) : (
+                          <>
+                            <Clock className="h-4 w-4 text-gray-400" />
+                            <span className={`text-gray-600 ${isLinkExpired(link.expiresAt) ? 'text-red-600 font-medium' : ''}`}>
+                              {timeRemaining}
+                            </span>
+                          </>
+                        )}
                       </div>
                       
                       <div className="flex items-center space-x-1">
@@ -284,18 +328,36 @@ export function EphemeralLinksManager({ cvId }: EphemeralLinksManagerProps) {
               <p className="text-blue-100 text-sm">Configure secure sharing options</p>
             </CardHeader>
             <CardContent className="space-y-6 p-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Expires in (hours)
+              {/* No Expiry Checkbox */}
+              <div className="space-y-4">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={newLink.noExpiry}
+                    onChange={(e) => handleNoExpiryChange(e.target.checked)}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="ml-2 text-sm text-gray-700 flex items-center">
+                    <Infinity className="h-4 w-4 mr-1 text-green-500" />
+                    No expiry date
+                  </span>
                 </label>
-                <Input
-                  type="number"
-                  value={newLink.expiresIn}
-                  onChange={(e) => setNewLink(prev => ({ ...prev, expiresIn: parseInt(e.target.value) }))}
-                  min="1"
-                  max="168"
-                />
-                <p className="text-xs text-gray-500 mt-1">Maximum: 168 hours (7 days)</p>
+                
+                {!newLink.noExpiry && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Expires in (hours)
+                    </label>
+                    <Input
+                      type="number"
+                      value={newLink.expiresIn}
+                      onChange={(e) => setNewLink(prev => ({ ...prev, expiresIn: parseInt(e.target.value) }))}
+                      min="1"
+                      max="168"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Maximum: 168 hours (7 days)</p>
+                  </div>
+                )}
               </div>
 
               <div>

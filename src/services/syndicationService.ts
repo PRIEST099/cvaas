@@ -58,7 +58,15 @@ class SyndicationService {
       if (!user) throw new Error('Authentication required');
 
       const expiresAt = new Date();
-      expiresAt.setHours(expiresAt.getHours() + options.expiresIn);
+      
+      // Check if this is a "no expiry" link
+      if (options.expiresIn === Number.MAX_SAFE_INTEGER) {
+        // Set expiry to 100 years in the future for "no expiry" links
+        expiresAt.setFullYear(expiresAt.getFullYear() + 100);
+      } else {
+        // Normal expiry calculation
+        expiresAt.setHours(expiresAt.getHours() + options.expiresIn);
+      }
       
       const accessToken = `ephemeral_${Math.random().toString(36).substring(2)}_${Date.now()}`;
 
