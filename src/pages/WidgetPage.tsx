@@ -3,11 +3,10 @@ import { useParams } from 'react-router-dom';
 import { LiveCVWidget } from '../components/widgets/LiveCVWidget';
 import { cvService } from '../services/cvService';
 import { useState, useEffect } from 'react';
-import { CV } from '../types/cv';
 
 export function WidgetPage() {
-  const { cvId } = useParams<{ cvId: string }>();
-  const [cv, setCV] = useState<CV | null>(null);
+  const { cvId } = useParams();
+  const [cv, setCV] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
