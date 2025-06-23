@@ -200,11 +200,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
       console.log('📊 register: SignUp response', { 
         userExists: !!authData.user, 
         sessionExists: !!authData.session,
-        error: authError?.message 
+        error: authError?.message,
+        errorCode: authError?.code
       });
 
       if (authError) {
         console.error('❌ register: User signup failed:', authError);
+        
+        // Handle specific error cases with more helpful messages
+        if (authError.code === 'user_already_exists') {
+          throw new Error('This email is already registered. Please log in or use a different email address.');
+        }
+        
         throw authError;
       }
 
@@ -269,7 +276,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } catch (error) {
       console.error('💥 register: Exception during registration:', error);
       setIsLoading(false);
-      handleSupabaseError(error);
+      throw error; // Re-throw the error so the UI can handle it properly
     } finally {
       // Only set loading to false if we haven't successfully registered
       // (successful registration will trigger auth state change which handles loading)
