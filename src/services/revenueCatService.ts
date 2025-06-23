@@ -1,4 +1,12 @@
-import * as Purchases from '@revenuecat/purchases-js';
+import { 
+  configure, 
+  getCustomerInfo, 
+  getOfferings, 
+  purchasePackage, 
+  restorePurchases, 
+  logIn, 
+  logOut 
+} from '@revenuecat/purchases-js';
 import type { CustomerInfo, PurchasesOffering } from '@revenuecat/purchases-js';
 import { syndicationService } from './syndicationService';
 import { getCurrentUser } from '../lib/supabase';
@@ -12,14 +20,14 @@ class RevenueCatService {
     try {
       // Initialize RevenueCat with your API key
       // Replace 'your_revenuecat_api_key' with your actual RevenueCat public API key
-      await Purchases.configure({
+      await configure({
         apiKey: import.meta.env.VITE_REVENUECAT_API_KEY || 'your_revenuecat_api_key'
       });
 
       // Set user ID if authenticated
       const user = await getCurrentUser();
       if (user) {
-        await Purchases.logIn(user.id);
+        await logIn(user.id);
       }
 
       this.isInitialized = true;
@@ -33,7 +41,7 @@ class RevenueCatService {
   async getCustomerInfo(): Promise<CustomerInfo | null> {
     try {
       await this.initialize();
-      return await Purchases.getCustomerInfo();
+      return await getCustomerInfo();
     } catch (error) {
       console.error('Failed to get customer info:', error);
       return null;
@@ -43,7 +51,7 @@ class RevenueCatService {
   async getOfferings(): Promise<PurchasesOffering[]> {
     try {
       await this.initialize();
-      const offerings = await Purchases.getOfferings();
+      const offerings = await getOfferings();
       return offerings.all;
     } catch (error) {
       console.error('Failed to get offerings:', error);
@@ -72,7 +80,7 @@ class RevenueCatService {
         throw new Error('Product not found');
       }
 
-      const purchaseResult = await Purchases.purchasePackage(product);
+      const purchaseResult = await purchasePackage(product);
       
       // Update subscription status in our database
       await this.syncSubscriptionStatus(purchaseResult.customerInfo);
@@ -97,7 +105,7 @@ class RevenueCatService {
   }> {
     try {
       await this.initialize();
-      const customerInfo = await Purchases.restorePurchases();
+      const customerInfo = await restorePurchases();
       
       // Update subscription status in our database
       await this.syncSubscriptionStatus(customerInfo);
@@ -149,7 +157,7 @@ class RevenueCatService {
   async logOut() {
     try {
       if (this.isInitialized) {
-        await Purchases.logOut();
+        await logOut();
       }
     } catch (error) {
       console.error('Failed to log out from RevenueCat:', error);
