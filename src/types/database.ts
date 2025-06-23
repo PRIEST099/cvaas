@@ -19,6 +19,7 @@ export interface Database {
           company_name: string | null
           profile_image_url: string | null
           is_verified: boolean
+          is_premium_link_subscriber: boolean
           created_at: string
           updated_at: string
         }
@@ -31,6 +32,7 @@ export interface Database {
           company_name?: string | null
           profile_image_url?: string | null
           is_verified?: boolean
+          is_premium_link_subscriber?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -43,6 +45,7 @@ export interface Database {
           company_name?: string | null
           profile_image_url?: string | null
           is_verified?: boolean
+          is_premium_link_subscriber?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -552,6 +555,7 @@ export interface Database {
           cv_id: string
           created_by: string
           access_token: string
+          custom_slug: string | null
           expires_at: string
           max_views: number | null
           current_views: number
@@ -566,6 +570,7 @@ export interface Database {
           cv_id: string
           created_by: string
           access_token: string
+          custom_slug?: string | null
           expires_at: string
           max_views?: number | null
           current_views?: number
@@ -580,6 +585,7 @@ export interface Database {
           cv_id?: string
           created_by?: string
           access_token?: string
+          custom_slug?: string | null
           expires_at?: string
           max_views?: number | null
           current_views?: number
@@ -624,7 +630,53 @@ export interface Database {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      access_ephemeral_link: {
+        Args: {
+          token: string
+          password_input?: string
+          ip_addr?: string
+          user_agent_input?: string
+        }
+        Returns: Json
+      }
+      access_ephemeral_link_by_slug: {
+        Args: {
+          slug: string
+          password_input?: string
+          ip_addr?: string
+          user_agent_input?: string
+        }
+        Returns: Json
+      }
+      is_custom_slug_available: {
+        Args: {
+          slug: string
+        }
+        Returns: boolean
+      }
+      generate_custom_slug_suggestions: {
+        Args: {
+          base_name: string
+          user_id: string
+        }
+        Returns: Json
+      }
+      log_ephemeral_download: {
+        Args: {
+          token: string
+          ip_addr?: string
+          user_agent_input?: string
+        }
+        Returns: boolean
+      }
+      log_ephemeral_download_by_slug: {
+        Args: {
+          slug: string
+          ip_addr?: string
+          user_agent_input?: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       user_role: 'candidate' | 'recruiter'

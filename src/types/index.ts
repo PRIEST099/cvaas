@@ -8,6 +8,7 @@ export interface User {
   company_name: string | null;
   profile_image_url: string | null;
   is_verified: boolean;
+  is_premium_link_subscriber: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -103,6 +104,7 @@ export interface EphemeralLink {
   cvId: string;
   createdBy: string;
   accessToken: string;
+  customSlug?: string | null;
   expiresAt: string;
   maxViews?: number;
   currentViews: number;
@@ -132,4 +134,39 @@ export interface WidgetConfig {
   showContact: boolean;
   customCSS: string;
   autoUpdate: boolean;
+}
+
+// RevenueCat Integration Types
+export interface RevenueCatCustomerInfo {
+  originalAppUserId: string;
+  entitlements: {
+    [key: string]: {
+      isActive: boolean;
+      willRenew: boolean;
+      periodType: string;
+      latestPurchaseDate: string;
+      originalPurchaseDate: string;
+      expirationDate: string | null;
+      store: string;
+      productIdentifier: string;
+    };
+  };
+  activeSubscriptions: string[];
+  allPurchasedProductIdentifiers: string[];
+  nonSubscriptionTransactions: any[];
+  firstSeen: string;
+  originalApplicationVersion: string | null;
+  requestDate: string;
+}
+
+export interface CustomSlugSuggestion {
+  slug: string;
+  available: boolean;
+}
+
+export interface PremiumLinkFeatures {
+  customSlugs: boolean;
+  unlimitedLinks: boolean;
+  advancedAnalytics: boolean;
+  prioritySupport: boolean;
 }
