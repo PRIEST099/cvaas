@@ -221,7 +221,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       if (authError) {
         console.error('❌ register: User signup failed:', authError);
-        setIsLoading(false);
         
         // Handle specific error cases with more helpful messages
         if (authError.code === 'user_already_exists') {
@@ -233,7 +232,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       if (!authData.user) {
         console.warn('⚠️ register: No user returned despite no error');
-        setIsLoading(false);
         throw new Error('Registration failed: No user data received');
       }
 
@@ -270,14 +268,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
         console.error('❌ register: Profile creation failed:', profileError);
         // If profile creation fails, we should sign out the user to maintain consistency
         await supabase.auth.signOut();
-        setIsLoading(false);
         throw new Error(`Profile creation failed: ${profileError.message}`);
       }
 
       if (!profileResult) {
         console.error('❌ register: No profile data returned');
         await supabase.auth.signOut();
-        setIsLoading(false);
         throw new Error('Registration failed: Profile creation returned no data');
       }
 
@@ -289,14 +285,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
       
       // Step 4: Immediately set the user profile in state for auto-login
       setUser(profileResult);
-      setIsLoading(false);
       
       console.log('🎉 register: Registration completed successfully - user is now logged in');
       
     } catch (error) {
       console.error('💥 register: Exception during registration:', error);
-      setIsLoading(false);
       throw error;
+    } finally {
+      // CRITICAL: Always set loading to false in finally block
+      setIsLoading(false);
     }
   };
 
