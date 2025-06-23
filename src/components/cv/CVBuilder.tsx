@@ -12,7 +12,12 @@ import {
   Plus,
   Settings,
   Link as LinkIcon,
-  Code
+  Code,
+  User,
+  Award,
+  Building,
+  Star,
+  FileText
 } from 'lucide-react';
 import { cvService } from '../../services/cvService';
 import { Button } from '../ui/Button';
@@ -24,7 +29,7 @@ import { EphemeralLinksManager } from '../privacy/EphemeralLinksManager';
 export function CVBuilder() {
   const { cvId } = useParams<{ cvId: string }>();
   const navigate = useNavigate();
-  const [cv, setCV] = useState(null);
+  const [cv, setCV] = useState<any>(null);
   const [activeSection, setActiveSection] = useState('personal_info');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -42,6 +47,11 @@ export function CVBuilder() {
       setIsLoading(true);
       const cvData = await cvService.getCV(cvId!);
       setCV(cvData);
+      
+      // Set active section to the first available section
+      if (cvData.sections && cvData.sections.length > 0) {
+        setActiveSection(cvData.sections[0].id);
+      }
     } catch (error) {
       console.error('Failed to load CV:', error);
     } finally {
@@ -54,7 +64,19 @@ export function CVBuilder() {
     
     try {
       setIsSaving(true);
-      await cvService.updateCV(cv.id, cv);
+      await cvService.updateCV(cv.id, {
+        title: cv.title,
+        metadata: cv.metadata
+      });
+      
+      // Save all sections
+      for (const section of cv.sections) {
+        await cvService.updateCVSection(section.id, {
+          content: section.content,
+          is_visible: section.is_visible,
+          title: section.title
+        });
+      }
     } catch (error) {
       console.error('Failed to save CV:', error);
     } finally {
@@ -65,49 +87,106 @@ export function CVBuilder() {
   const handleSectionUpdate = (sectionId: string, updates: any) => {
     if (!cv) return;
     
-    setCV(prev => ({
-      ...prev!,
-      sections: prev!.sections.map(section =>
+    setCV((prev: any) => ({
+      ...prev,
+      sections: prev.sections.map((section: any) =>
         section.id === sectionId ? { ...section, ...updates } : section
       ),
       updated_at: new Date().toISOString()
     }));
   };
 
+  const getSectionIcon = (sectionType: string) => {
+    switch (sectionType) {
+      case 'personal_info': return <User className="h-4 w-4" />;
+      case 'summary': return <FileText className="h-4 w-4" />;
+      case 'experience': return <Building className="h-4 w-4" />;
+      case 'education': return <Award className="h-4 w-4" />;
+      case 'skills': return <Star className="h-4 w-4" />;
+      default: return <Sparkles className="h-4 w-4" />;
+    }
+  };
+
+  const getSectionProgress = (section: any) => {
+    if (!section.content) return 0;
+    
+    switch (section.section_type) {
+      case 'personal_info':
+        const personalFields = ['fullName', 'email', 'phone', 'location'];
+        const filledPersonal = personalFields.filter(field => section.content[field]?.trim()).length;
+        return Math.round((filledPersonal / personalFields.length) * 100);
+      
+      case 'summary':
+        return section.content.summary?.trim() ? 100 : 0;
+      
+      case 'experience':
+        return (section.content.experiences?.length || 0) > 0 ? 100 : 0;
+      
+      case 'education':
+        return (section.content.education?.length || 0) > 0 ? 100 : 0;
+      
+      case 'skills':
+        return (section.content.skillCategories?.length || 0) > 0 ? 100 : 0;
+      
+      default:
+        return 0;
+    }
+  };
+
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading your CV...</p>
+        </div>
       </div>
     );
   }
 
   if (!cv) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">CV Not Found</h2>
+          <p className="text-gray-600 mb-6">The CV you're looking for doesn't exist or you don't have access to it.</p>
           <Button onClick={() => navigate('/cvs')}>Back to CVs</Button>
         </div>
       </div>
     );
   }
 
+  const activeSection_data = cv.sections?.find((s: any) => s.id === activeSection);
+  const overallProgress = cv.sections ? 
+    Math.round(cv.sections.reduce((sum: number, section: any) => sum + getSectionProgress(section), 0) / cv.sections.length) : 0;
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-40">
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
               <h1 className="text-xl font-semibold text-gray-900">{cv.title}</h1>
-              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${
-                cv.status === 'published' ? 'bg-green-100 text-green-800' :
-                cv.status === 'optimizing' ? 'bg-yellow-100 text-yellow-800' :
-                'bg-gray-100 text-gray-800'
-              }`}>
-                {cv.status}
-              </span>
+              <div className="flex items-center space-x-2">
+                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                  cv.status === 'published' ? 'bg-green-100 text-green-800' :
+                  cv.status === 'optimizing' ? 'bg-yellow-100 text-yellow-800' :
+                  'bg-gray-100 text-gray-800'
+                }`}>
+                  {cv.status}
+                </span>
+                <div className="flex items-center space-x-1 text-xs text-gray-500">
+                  <span>Progress:</span>
+                  <div className="w-16 bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                      style={{ width: `${overallProgress}%` }}
+                    ></div>
+                  </div>
+                  <span>{overallProgress}%</span>
+                </div>
+              </div>
             </div>
             
             <div className="flex items-center space-x-3">
@@ -168,10 +247,15 @@ export function CVBuilder() {
               <Button
                 size="sm"
                 onClick={handleSave}
-                isLoading={isSaving}
+                disabled={isSaving}
+                className="relative"
               >
-                <Save className="h-4 w-4 mr-1" />
-                Save
+                {isSaving ? (
+                  <RefreshCw className="h-4 w-4 mr-1 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4 mr-1" />
+                )}
+                {isSaving ? 'Saving...' : 'Save'}
               </Button>
             </div>
           </div>
@@ -182,44 +266,52 @@ export function CVBuilder() {
         <div className="grid lg:grid-cols-4 gap-8">
           {/* Sidebar - Section Navigation */}
           <div className="lg:col-span-1">
-            <Card>
+            <Card className="sticky top-24">
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <h3 className="font-semibold">Sections</h3>
-                  <Button size="sm" variant="ghost">
+                  <h3 className="font-semibold">CV Sections</h3>
+                  <Button size="sm" variant="ghost" onClick={() => console.log('Add section coming soon')}>
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
               </CardHeader>
               <CardContent className="space-y-2">
-                {cv.sections && cv.sections.map((section) => (
-                  <button
-                    key={section.id}
-                    className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
-                      activeSection === section.id
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'hover:bg-gray-100'
-                    }`}
-                    onClick={() => setActiveSection(section.id)}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium">{section.title}</span>
-                      {section.ai_optimized && (
-                        <Sparkles className="h-4 w-4 text-yellow-500" />
-                      )}
-                    </div>
-                  </button>
-                ))}
-                
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full mt-4"
-                  onClick={() => console.log('Add section coming soon')}
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add Section
-                </Button>
+                {cv.sections && cv.sections.map((section: any) => {
+                  const progress = getSectionProgress(section);
+                  return (
+                    <button
+                      key={section.id}
+                      className={`w-full text-left px-3 py-3 rounded-lg transition-all duration-200 ${
+                        activeSection === section.id
+                          ? 'bg-blue-100 text-blue-700 shadow-sm'
+                          : 'hover:bg-gray-100'
+                      }`}
+                      onClick={() => setActiveSection(section.id)}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center space-x-2">
+                          {getSectionIcon(section.section_type)}
+                          <span className="font-medium">{section.title}</span>
+                        </div>
+                        {section.ai_optimized && (
+                          <Sparkles className="h-4 w-4 text-yellow-500" />
+                        )}
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <div className="flex-1 bg-gray-200 rounded-full h-1.5">
+                          <div 
+                            className={`h-1.5 rounded-full transition-all duration-300 ${
+                              progress === 100 ? 'bg-green-500' : 
+                              progress > 0 ? 'bg-blue-500' : 'bg-gray-300'
+                            }`}
+                            style={{ width: `${progress}%` }}
+                          ></div>
+                        </div>
+                        <span className="text-xs text-gray-500">{progress}%</span>
+                      </div>
+                    </button>
+                  );
+                })}
               </CardContent>
             </Card>
 
@@ -252,7 +344,7 @@ export function CVBuilder() {
           {/* Main Content - Section Editor */}
           <div className="lg:col-span-3">
             <CVSectionEditor
-              section={cv.sections?.find(s => s.id === activeSection)!}
+              section={activeSection_data}
               onUpdate={(updates) => handleSectionUpdate(activeSection, updates)}
             />
           </div>
