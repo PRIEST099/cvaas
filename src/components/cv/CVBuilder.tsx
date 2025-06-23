@@ -48,7 +48,6 @@ export function CVBuilder() {
       const cvData = await cvService.getCV(cvId!);
       setCV(cvData);
       
-      // Set active section to the first available section
       if (cvData.sections && cvData.sections.length > 0) {
         setActiveSection(cvData.sections[0].id);
       }
@@ -69,7 +68,6 @@ export function CVBuilder() {
         metadata: cv.metadata
       });
       
-      // Save all sections
       for (const section of cv.sections) {
         await cvService.updateCVSection(section.id, {
           content: section.content,
@@ -206,33 +204,6 @@ export function CVBuilder() {
               >
                 <Code className="h-4 w-4 mr-1" />
                 Widget
-              </Button>
-              
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => console.log('Skills radar coming soon')}
-              >
-                <Sparkles className="h-4 w-4 mr-1" />
-                Skills Radar
-              </Button>
-              
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => console.log('Optimization coming soon')}
-              >
-                <Zap className="h-4 w-4 mr-1" />
-                Optimize
-              </Button>
-              
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => console.log('Version control coming soon')}
-              >
-                <GitBranch className="h-4 w-4 mr-1" />
-                Versions
               </Button>
               
               <Button

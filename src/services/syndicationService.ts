@@ -1,76 +1,7 @@
 import { supabase, handleSupabaseError, getCurrentUser } from '../lib/supabase';
-
-// Basic types for syndication service
-interface EphemeralLink {
-  id: string;
-  cvId: string;
-  createdBy: string;
-  accessToken: string;
-  expiresAt: string;
-  maxViews?: number;
-  currentViews: number;
-  allowDownload: boolean;
-  requirePassword?: boolean;
-  password?: string;
-  isActive: boolean;
-  accessLog: LinkAccess[];
-  createdAt: string;
-}
-
-interface LinkAccess {
-  id: string;
-  linkId: string;
-  accessedAt: string;
-  ipAddress: string;
-  userAgent: string;
-  action: 'view' | 'download';
-}
-
-interface SyndicationCredit {
-  id: string;
-  ownerId: string;
-  amount: number;
-  type: string;
-  source: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface SyndicationMarketplace {
-  id: string;
-  sellerId: string;
-  creditAmount: number;
-  pricePerCredit: number;
-  currency: string;
-  minPurchase: number;
-  maxPurchase: number;
-  isActive: boolean;
-  totalSold: number;
-  createdAt: string;
-}
-
-interface SyndicationAnalytics {
-  totalCreditsEarned: number;
-  totalCreditsSpent: number;
-  currentBalance: number;
-  successfulSubmissions: number;
-  totalRevenue: number;
-  averageQualityScore: number;
-  topPerformingSubmissions: any[];
-  creditHistory: any[];
-  marketplaceActivity: {
-    totalSales: number;
-    averagePrice: number;
-    topBuyers: string[];
-  };
-}
+import { EphemeralLink, LinkAccess } from '../types';
 
 class SyndicationService {
-  private delay(ms: number = 500): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
-
   // Ephemeral Links
   async getEphemeralLinks(userId: string): Promise<EphemeralLink[]> {
     try {
@@ -177,7 +108,7 @@ class SyndicationService {
       const { data, error } = await supabase.rpc('access_ephemeral_link', {
         token: accessToken,
         password_input: password,
-        ip_addr: null, // Could be populated from request headers
+        ip_addr: null,
         user_agent_input: navigator.userAgent
       });
 
@@ -207,54 +138,6 @@ class SyndicationService {
       console.error('Failed to log download:', error);
       return false;
     }
-  }
-
-  // Marketplace (placeholder implementation)
-  async getMarketplaceListings(): Promise<SyndicationMarketplace[]> {
-    await this.delay();
-    // Return empty array for now - marketplace functionality can be implemented later
-    return [];
-  }
-
-  async purchaseCredits(userId: string, amount: number, paymentMethod: string): Promise<SyndicationCredit> {
-    await this.delay();
-    // Placeholder implementation
-    return {
-      id: `credit_${Date.now()}`,
-      ownerId: userId,
-      amount,
-      type: 'purchase',
-      source: 'purchase',
-      isActive: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-  }
-
-  async getUserCredits(userId: string): Promise<SyndicationCredit[]> {
-    await this.delay();
-    // Placeholder implementation
-    return [];
-  }
-
-  async getSyndicationAnalytics(userId: string): Promise<SyndicationAnalytics> {
-    await this.delay();
-    // Placeholder implementation
-    return {
-      totalCreditsEarned: 0,
-      totalCreditsSpent: 0,
-      currentBalance: 0,
-      successfulSubmissions: 0,
-      totalRevenue: 0,
-      averageQualityScore: 0,
-      topPerformingSubmissions: [],
-      creditHistory: [],
-      marketplaceActivity: {
-        totalSales: 0,
-        averagePrice: 0,
-        topBuyers: []
-      }
-    };
   }
 }
 

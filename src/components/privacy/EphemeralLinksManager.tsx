@@ -11,7 +11,7 @@ import {
   ExternalLink,
   Shield
 } from 'lucide-react';
-import { EphemeralLink } from '../../types/syndication';
+import { EphemeralLink } from '../../types';
 import { syndicationService } from '../../services/syndicationService';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui/Button';
@@ -78,7 +78,6 @@ export function EphemeralLinksManager({ cvId }: EphemeralLinksManagerProps) {
   const copyToClipboard = (token: string) => {
     const url = `${window.location.origin}/cv/ephemeral/${token}`;
     navigator.clipboard.writeText(url);
-    // Show toast notification in real app
   };
 
   const formatTimeRemaining = (expiresAt: string) => {
@@ -200,21 +199,6 @@ export function EphemeralLinksManager({ cvId }: EphemeralLinksManagerProps) {
                   </Button>
                 </div>
               </div>
-              
-              {/* Access Log Preview */}
-              {link.accessLog.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Recent Access</h4>
-                  <div className="space-y-1">
-                    {link.accessLog.slice(-3).map((access) => (
-                      <div key={access.id} className="flex items-center justify-between text-xs text-gray-600">
-                        <span>{access.action} from {access.ipAddress}</span>
-                        <span>{new Date(access.accessedAt).toLocaleString()}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </CardContent>
           </Card>
         ))}
