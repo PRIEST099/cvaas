@@ -51,12 +51,12 @@ export function QuestSubmissionReviewPage() {
   const loadSubmission = async () => {
     try {
       setIsLoading(true);
-      // Get all submissions and find the specific one
-      const submissions = await questService.getSubmissions();
+      // Get submissions for this recruiter (submissions to quests they created)
+      const submissions = await questService.getSubmissions({ forRecruiter: true });
       const targetSubmission = submissions.find(s => s.id === submissionId);
       
       if (!targetSubmission) {
-        setError('Submission not found');
+        setError('Submission not found or you do not have permission to view it');
         return;
       }
 
