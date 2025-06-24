@@ -17,6 +17,10 @@ import { WidgetPage } from './pages/WidgetPage';
 import { EnterprisePage } from './pages/EnterprisePage';
 import { PublicCVViewPage } from './pages/PublicCVViewPage';
 import { WidgetViewPage } from './pages/WidgetViewPage';
+import { QuestBuilder } from './components/quests/QuestBuilder';
+import { RecruiterQuestsPage } from './pages/RecruiterQuestsPage';
+import { QuestSubmissionReviewPage } from './pages/QuestSubmissionReviewPage';
+import { QuestSubmissionsListPage } from './pages/QuestSubmissionsListPage';
 
 function AppRoutes() {
   const { user, supabaseUser, isLoading } = useAuth();
@@ -59,6 +63,7 @@ function AppRoutes() {
           }
         />
         
+        {/* CV Management Routes (Candidates) */}
         <Route
           path="/cvs"
           element={
@@ -86,6 +91,53 @@ function AppRoutes() {
           }
         />
         
+        {/* Quest Management Routes (Recruiters) */}
+        <Route
+          path="/challenges/new"
+          element={
+            <ProtectedRoute requiredRole="recruiter">
+              <QuestBuilder />
+            </ProtectedRoute>
+          }
+        />
+        
+        <Route
+          path="/challenges/:questId/edit"
+          element={
+            <ProtectedRoute requiredRole="recruiter">
+              <QuestBuilder />
+            </ProtectedRoute>
+          }
+        />
+        
+        <Route
+          path="/recruiter/quests"
+          element={
+            <ProtectedRoute requiredRole="recruiter">
+              <RecruiterQuestsPage />
+            </ProtectedRoute>
+          }
+        />
+        
+        <Route
+          path="/submissions"
+          element={
+            <ProtectedRoute requiredRole="recruiter">
+              <QuestSubmissionsListPage />
+            </ProtectedRoute>
+          }
+        />
+        
+        <Route
+          path="/submissions/:submissionId/review"
+          element={
+            <ProtectedRoute requiredRole="recruiter">
+              <QuestSubmissionReviewPage />
+            </ProtectedRoute>
+          }
+        />
+        
+        {/* Talent Discovery (Recruiters) */}
         <Route
           path="/talent"
           element={
@@ -95,6 +147,7 @@ function AppRoutes() {
           }
         />
         
+        {/* Challenges (Both roles) */}
         <Route
           path="/challenges"
           element={
@@ -104,6 +157,7 @@ function AppRoutes() {
           }
         />
         
+        {/* Syndication (Recruiters) */}
         <Route
           path="/syndication"
           element={
@@ -113,6 +167,7 @@ function AppRoutes() {
           }
         />
         
+        {/* Enterprise (Recruiters) */}
         <Route
           path="/enterprise"
           element={
@@ -122,7 +177,7 @@ function AppRoutes() {
           }
         />
         
-        {/* Placeholder routes for future pages */}
+        {/* Legacy/Alias routes */}
         <Route path="/quests" element={<ProtectedRoute><ChallengesPage /></ProtectedRoute>} />
         <Route path="/projects" element={<ProtectedRoute><div className="p-8">Projects page coming soon...</div></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><div className="p-8">Settings page coming soon...</div></ProtectedRoute>} />
