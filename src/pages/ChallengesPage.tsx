@@ -10,16 +10,20 @@ import {
   Target,
   TrendingUp,
   Clock,
-  Users
+  Users,
+  Play,
+  CheckCircle
 } from 'lucide-react';
 import { questService } from '../services/questService';
 import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card, CardContent, CardHeader } from '../components/ui/Card';
 
 export function ChallengesPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [challenges, setChallenges] = useState([]);
   const [filteredChallenges, setFilteredChallenges] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -91,8 +95,7 @@ export function ChallengesPage() {
   };
 
   const handleStartChallenge = (challenge) => {
-    // TODO: Navigate to challenge interface
-    console.log('Starting challenge:', challenge.id);
+    navigate(`/challenges/${challenge.id}/submit`);
   };
 
   if (isLoading) {
@@ -110,7 +113,7 @@ export function ChallengesPage() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Skill Challenges</h1>
           <p className="text-gray-600 mt-2">
-            Complete challenges to earn blockchain-verified skill badges
+            Complete challenges to earn blockchain-verified skill badges and showcase your abilities
           </p>
         </div>
         
@@ -232,11 +235,11 @@ export function ChallengesPage() {
                 <div className="flex items-start justify-between">
                   <div className="flex items-center space-x-3">
                     <div className="p-2 bg-blue-100 rounded-lg">
-                      <Code className="h-5 w-5" />
+                      <Code className="h-5 w-5 text-blue-600" />
                     </div>
-                    <div>
-                      <h3 className="font-semibold text-lg text-gray-900">{challenge.title}</h3>
-                      <p className="text-sm text-gray-600">{challenge.description}</p>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-lg text-gray-900 line-clamp-2">{challenge.title}</h3>
+                      <p className="text-sm text-gray-600 mt-1 line-clamp-2">{challenge.description}</p>
                     </div>
                   </div>
                   
@@ -312,6 +315,7 @@ export function ChallengesPage() {
                     className="w-full"
                     disabled={!challenge.is_active}
                   >
+                    <Play className="h-4 w-4 mr-2" />
                     Start Challenge
                   </Button>
                 </div>

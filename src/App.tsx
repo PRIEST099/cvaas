@@ -21,6 +21,7 @@ import { QuestBuilder } from './components/quests/QuestBuilder';
 import { RecruiterQuestsPage } from './pages/RecruiterQuestsPage';
 import { QuestSubmissionReviewPage } from './pages/QuestSubmissionReviewPage';
 import { QuestSubmissionsListPage } from './pages/QuestSubmissionsListPage';
+import { QuestSubmissionPage } from './pages/QuestSubmissionPage';
 
 function AppRoutes() {
   const { user, supabaseUser, isLoading } = useAuth();
@@ -133,6 +134,16 @@ function AppRoutes() {
           element={
             <ProtectedRoute requiredRole="recruiter">
               <QuestSubmissionReviewPage />
+            </ProtectedRoute>
+          }
+        />
+        
+        {/* Challenge Submission Route (Candidates) */}
+        <Route
+          path="/challenges/:questId/submit"
+          element={
+            <ProtectedRoute requiredRole="candidate">
+              <QuestSubmissionPage />
             </ProtectedRoute>
           }
         />
