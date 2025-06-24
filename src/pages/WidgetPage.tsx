@@ -65,7 +65,7 @@ export function WidgetPage() {
   width="100%" 
   height="${getWidgetHeight()}"
   frameborder="0"
-  scrolling="no"
+  scrolling="auto"
   style="border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
 </iframe>`;
     setEmbedCode(code);
@@ -251,7 +251,7 @@ export function WidgetPage() {
               {/* Custom CSS */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Custom CSS (Optional)
+                  Custom CSS (<i>coming soon!</i>)
                 </label>
                 <textarea
                   value={widgetConfig.customCSS}
@@ -268,7 +268,7 @@ export function WidgetPage() {
             <CardHeader>
               <h3 className="font-semibold flex items-center">
                 <Code className="h-5 w-5 mr-2" />
-                Embed Code
+                Embed Code (Only works for public CVs)
               </h3>
             </CardHeader>
             <CardContent>

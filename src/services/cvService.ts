@@ -56,7 +56,7 @@ class CVService {
           skills (*)
         `)
         .eq('id', cvId)
-        .single();
+        .maybeSingle();
 
       if (cvError) throw cvError;
       if (!cv) throw new Error('CV not found');
@@ -89,7 +89,7 @@ class CVService {
           ...cvData
         })
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
 
@@ -147,7 +147,7 @@ class CVService {
         .update(updates)
         .eq('id', cvId)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       return data;
@@ -193,7 +193,7 @@ class CVService {
         .update(updates)
         .eq('id', sectionId)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       return data;
@@ -210,8 +210,7 @@ class CVService {
         .from('education')
         .insert({ ...education, cv_id: cvId })
         .select()
-        .single();
-
+        .maybeSingle();
       if (error) throw error;
       return data;
     } catch (error) {
@@ -227,7 +226,7 @@ class CVService {
         .update(updates)
         .eq('id', educationId)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       return data;
@@ -257,7 +256,7 @@ class CVService {
         .from('experience')
         .insert({ ...experience, cv_id: cvId })
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       return data;
@@ -274,7 +273,7 @@ class CVService {
         .update(updates)
         .eq('id', experienceId)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       return data;
@@ -304,7 +303,7 @@ class CVService {
         .from('projects')
         .insert({ ...project, cv_id: cvId })
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       return data;
@@ -321,7 +320,7 @@ class CVService {
         .update(updates)
         .eq('id', projectId)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       return data;
@@ -351,7 +350,7 @@ class CVService {
         .from('skills')
         .insert({ ...skill, cv_id: cvId })
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       return data;
@@ -368,7 +367,7 @@ class CVService {
         .update(updates)
         .eq('id', skillId)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       return data;
@@ -406,7 +405,7 @@ class CVService {
         `)
         .eq('public_url', publicUrl)
         .eq('is_public', true)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       if (!cv) throw new Error('Public CV not found');
