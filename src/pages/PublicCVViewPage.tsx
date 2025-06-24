@@ -271,92 +271,105 @@ export function PublicCVViewPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <FileText className="h-6 w-6 text-blue-600" />
-                <span className="text-xl font-bold text-gray-900">CVaaS</span>
-              </div>
-              <div className="h-6 w-px bg-gray-300"></div>
-              <h1 className="text-xl font-semibold text-gray-900">{cv.title}</h1>
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800 font-medium">
-                <Eye className="h-4 w-4 mr-1" />
-                Shared CV
-              </span>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              {linkInfo?.allow_download && (
-                <Button
-                  onClick={handleDownload}
-                  isLoading={isDownloading}
-                  variant="outline"
-                  className="shadow-sm"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Download
-                </Button>
-              )}
-              
-              <div className="text-sm text-gray-500 bg-gray-50 px-3 py-2 rounded-lg">
-                {linkInfo?.max_views ? (
-                  <span>
-                    {linkInfo.current_views} / {linkInfo.max_views} views
+    <div className="relative min-h-screen overflow-hidden">
+    {/* Fullscreen background image behind everything */}
+    <div className="fixed inset-0 z-0 bg-[url('/paper-texture.jpg')] bg-cover bg-center opacity-90" />
+
+      {/* Your actual page content */}
+      <div className="relative z-10">
+          {/* Header */}
+          <div className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-lg">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex items-center justify-between h-16">
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-2">
+                    <FileText className="h-6 w-6 text-blue-600" />
+                    <span className="text-xl font-bold text-gray-900">CVaaS</span>
+                  </div>
+                  <div className="h-6 w-px bg-gray-300"></div>
+                  <h1 className="text-xl font-semibold text-gray-900">{cv.title}</h1>
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800 font-medium">
+                    <Eye className="h-4 w-4 mr-1" />
+                    Shared CV
                   </span>
-                ) : (
-                  <span>{linkInfo?.current_views || 0} views</span>
-                )}
+                </div>
+                
+                <div className="flex items-center space-x-4">
+                  {linkInfo?.allow_download && (
+                    <Button
+                      onClick={handleDownload}
+                      isLoading={isDownloading}
+                      variant="outline"
+                      className="shadow-sm"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Download
+                    </Button>
+                  )}
+                  
+                  <div className="text-sm text-gray-500 bg-gray-50 px-3 py-2 rounded-lg">
+                    {linkInfo?.max_views ? (
+                      <span>
+                        {linkInfo.current_views} / {linkInfo.max_views} views
+                      </span>
+                    ) : (
+                      <span>{linkInfo?.current_views || 0} views</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* CV Content */}
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <div className="relative overflow-hidden rounded-2xl shadow-2xl">
+              {/* Paper texture background */}
+              
+
+
+              {/* White overlay for readability */}
+              <div className="relative bg-white p-8 lg:p-12">
+                <EmbeddableCVRenderer cv={cv} />
+              </div>
+            </div>
+          </div>
+
+
+
+          {/* Enhanced CTA Footer */}
+          <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-8">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="text-center">
+                <div className="flex items-center justify-center mb-4">
+                  <Sparkles className="h-6 w-6 mr-2" />
+                  <span className="text-lg font-semibold">Powered by CVaaS</span>
+                </div>
+                <p className="text-blue-100 mb-6 max-w-2xl mx-auto">
+                  Create your own professional CV with our AI-powered platform. 
+                  Build dynamic CVs, complete skill challenges, and get discovered by top companies.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <Button 
+                    variant="outline" 
+                    className="bg-white text-blue-600 hover:bg-blue-50 border-white"
+                    onClick={() => window.open('/', '_blank')}
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Create Your CV
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    className="text-white hover:bg-white hover:bg-opacity-20"
+                    onClick={() => window.open('/register?role=recruiter', '_blank')}
+                  >
+                    For Recruiters
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
-
-      {/* CV Content */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
-          <div className="p-8 lg:p-12">
-            <EmbeddableCVRenderer cv={cv} />
-          </div>
-        </div>
-      </div>
-
-      {/* Enhanced CTA Footer */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <div className="flex items-center justify-center mb-4">
-              <Sparkles className="h-6 w-6 mr-2" />
-              <span className="text-lg font-semibold">Powered by CVaaS</span>
-            </div>
-            <p className="text-blue-100 mb-6 max-w-2xl mx-auto">
-              Create your own professional CV with our AI-powered platform. 
-              Build dynamic CVs, complete skill challenges, and get discovered by top companies.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
-                variant="outline" 
-                className="bg-white text-blue-600 hover:bg-blue-50 border-white"
-                onClick={() => window.open('/', '_blank')}
-              >
-                <ExternalLink className="h-4 w-4 mr-2" />
-                Create Your CV
-              </Button>
-              <Button 
-                variant="ghost" 
-                className="text-white hover:bg-white hover:bg-opacity-20"
-                onClick={() => window.open('/register?role=recruiter', '_blank')}
-              >
-                For Recruiters
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+      </div> 
   );
 }

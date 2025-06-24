@@ -150,6 +150,7 @@ export function CVPreview({ cv, onClose }: CVPreviewProps) {
         </div>
 
         <div className="p-8 overflow-y-auto max-h-[calc(90vh-120px)] bg-gray-50">
+          
           <div className="max-w-3xl mx-auto bg-white p-8 shadow-lg rounded-lg">
             <EmbeddableCVRenderer cv={cv} />
           </div>
