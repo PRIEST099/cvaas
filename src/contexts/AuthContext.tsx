@@ -6,11 +6,11 @@ import { Database } from '../types/database';
 type UserProfile = Database['public']['Tables']['users']['Row'];
 
 interface AuthContextType {
-  user: UserProfile | null;
   supabaseUser: SupabaseUser | null;
+  user: UserProfile | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (userData: RegisterData) => Promise<void>;
+  register: (data: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
 }
@@ -25,432 +25,126 @@ interface RegisterData {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
 export function useAuth() {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  return ctx;
 }
 
-interface AuthProviderProps {
-  children: ReactNode;
-}
-
-// Helper function to create a timeout promise
-function createTimeoutPromise(ms: number, errorMessage: string) {
-  return new Promise((_, reject) => {
-    setTimeout(() => reject(new Error(errorMessage)), ms);
-  });
-}
-
-export function AuthProvider({ children }: AuthProviderProps) {
-  const [user, setUser] = useState<UserProfile | null>(null);
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null);
+  const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // 1) Subscribe & initial session
   useEffect(() => {
-    console.log('🔄 AuthProvider: Initializing auth state...');
-    
-    // Get initial session
-    const initializeAuth = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        console.log('🔍 AuthProvider: Initial session check', { 
-          sessionExists: !!session, 
-          userId: session?.user?.id, 
-          error: error?.message 
-        });
-        
-        if (error) {
-          console.error('❌ AuthProvider: Error getting initial session:', error);
-          setIsLoading(false);
-          return;
-        }
-        
-        if (session?.user) {
-          console.log('✅ AuthProvider: Found existing session for user:', session.user.id);
-          setSupabaseUser(session.user);
-          await loadUserProfile(session.user.id);
-        } else {
-          console.log('ℹ️ AuthProvider: No existing session found');
-          setIsLoading(false);
-        }
-      } catch (error) {
-        console.error('💥 AuthProvider: Error during initialization:', error);
-        setIsLoading(false);
-      }
-    };
+    supabase.auth.getSession()
+      .then(({ data }) => setSupabaseUser(data.session?.user || null))
+      .finally(() => setIsLoading(false));
 
-    initializeAuth();
-
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('🔔 AuthProvider: Auth state changed', { 
-        event, 
-        userId: session?.user?.id,
-        sessionExists: !!session
-      });
-      
-      if (session?.user) {
-        console.log('✅ AuthProvider: User authenticated:', session.user.id);
-        setSupabaseUser(session.user);
-        
-        // Only load user profile for authentication events or if we don't have a user
-        const shouldLoadProfile = 
-          event === 'SIGNED_IN' || 
-          event === 'SIGNED_UP' || 
-          !user || 
-          user.id !== session.user.id;
-          
-        if (shouldLoadProfile) {
-          console.log('📥 AuthProvider: Loading user profile due to:', { 
-            event, 
-            hasUserInState: !!user, 
-            userIdMatch: user?.id === session.user.id 
-          });
-          await loadUserProfile(session.user.id);
-        } else {
-          console.log('⏭️ AuthProvider: Skipping profile load - user already loaded');
-          setIsLoading(false);
-        }
-      } else {
-        console.log('🚪 AuthProvider: User logged out or session ended');
-        setSupabaseUser(null);
-        setUser(null);
-        setIsLoading(false);
-      }
+    const { data: sub } = supabase.auth.onAuthStateChange((_, session) => {
+      setSupabaseUser(session?.user || null);
     });
+    return () => sub.subscription.unsubscribe();
+  }, []);
 
-    return () => {
-      console.log('🧹 AuthProvider: Cleaning up auth subscription');
-      subscription.unsubscribe();
-    };
-  }, []); // Remove user from dependency array to prevent re-initialization
-
-  const loadUserProfile = async (userId: string) => {
-    console.log('👤 loadUserProfile: Loading profile for user:', userId);
-    
-    try {
-      // Create a timeout promise that rejects after 10 seconds (increased from 5 seconds)
-      const timeoutPromise = createTimeoutPromise(10000, 'Profile loading timeout');
-      
-      // Race the database query against the timeout
-      const queryPromise = supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
-
-      console.log('📊 loadUserProfile: Query result', { 
-        profileFound: !!data, 
-        error: error?.message,
-        errorCode: error?.code 
-      });
-
-      if (error) {
-        if (error.code === 'PGRST116') {
-          console.log('ℹ️ loadUserProfile: User profile not found (new user), this is normal for fresh registrations');
-          // Explicitly set user to null when profile is not found
+  // 2) Load user profile when supabaseUser changes
+  useEffect(() => {
+    if (!supabaseUser) {
+      setUser(null);
+      return;
+    }
+    setIsLoading(true);
+    supabase
+      .from('users')
+      .select('*')
+      .eq('id', supabaseUser.id)
+      .single()
+      .then(({ data, error }) => {
+        if (error && error.code !== 'PGRST116') {
+          console.error('Error loading profile:', error);
           setUser(null);
         } else {
-          console.error('❌ loadUserProfile: Error loading profile:', error);
-          // Set user to null for any other error as well - don't throw
-          setUser(null);
+          setUser(data || null);
         }
-      } else if (data) {
-        console.log('✅ loadUserProfile: Profile loaded successfully:', {
-          id: data.id,
-          email: data.email,
-          role: data.role,
-          firstName: data.first_name
-        });
-        setUser(data);
-      } else {
-        // Handle case where no error but also no data
-        console.log('ℹ️ loadUserProfile: No profile data returned');
-        setUser(null);
-      }
-    } catch (error) {
-      console.error('💥 loadUserProfile: Exception occurred:', error);
-      // Explicitly set user to null on any exception - don't throw
-      setUser(null);
-    } finally {
-      // CRITICAL: Always set loading to false
-      setIsLoading(false);
-    }
-  };
+      })
+      .finally(() => setIsLoading(false));
+  }, [supabaseUser]);
 
   const login = async (email: string, password: string) => {
-    console.log('🔐 login: Starting login process for email:', email);
-    
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      
-      console.log('📡 login: Calling supabase.auth.signInWithPassword...');
-      
-      // Create a timeout promise for the login request
-      const timeoutPromise = createTimeoutPromise(10000, 'Login request timeout');
-      
-      const loginPromise = supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      const { data, error } = await Promise.race([loginPromise, timeoutPromise]);
-
-      console.log('📊 login: SignIn response', { 
-        userExists: !!data.user, 
-        sessionExists: !!data.session,
-        error: error?.message 
-      });
-
-      if (error) {
-        console.error('❌ login: Authentication failed:', error);
-        throw error;
-      }
-
-      if (!data.user) {
-        console.warn('⚠️ login: No user returned despite no error');
-        throw new Error('Login failed: No user data received');
-      }
-
-      console.log('✅ login: User authenticated successfully:', data.user.id);
-      // Note: User profile will be loaded automatically via onAuthStateChange
-      
-    } catch (error) {
-      console.error('💥 login: Exception during login:', error);
-      handleSupabaseError(error);
-      throw error; // Re-throw to allow UI to handle the error
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+    } catch (err) {
+      handleSupabaseError(err);
+      throw err;
     } finally {
-      // CRITICAL FIX: Always set loading to false regardless of success or failure
       setIsLoading(false);
     }
   };
 
-  const register = async (userData: RegisterData) => {
-    console.log('📝 register: Starting registration process for email:', userData.email);
-    console.log('📋 register: User data:', { 
-      email: userData.email, 
-      role: userData.role, 
-      firstName: userData.firstName,
-      lastName: userData.lastName,
-      companyName: userData.companyName 
-    });
-    
+  const register = async (data: RegisterData) => {
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      
-      // Step 1: Sign up the user with Supabase Auth
-      console.log('📡 register: Calling supabase.auth.signUp...');
-      
-      // Create a timeout promise for the signup request
-      const timeoutPromise = createTimeoutPromise(10000, 'Registration request timeout');
-      
-      const signupPromise = supabase.auth.signUp({
-        email: userData.email,
-        password: userData.password,
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
       });
+      if (authError) throw authError;
+      if (!authData.user) throw new Error('No user returned');
 
-      const { data: authData, error: authError } = await Promise.race([signupPromise, timeoutPromise]);
-
-      console.log('📊 register: SignUp response', { 
-        userExists: !!authData.user, 
-        sessionExists: !!authData.session,
-        error: authError?.message,
-        errorCode: authError?.code
-      });
-
-      if (authError) {
-        console.error('❌ register: User signup failed:', authError);
-        
-        // Handle specific error cases with more helpful messages
-        if (authError.code === 'user_already_exists') {
-          throw new Error('This email is already registered. Please log in or use a different email address.');
-        }
-        
-        throw authError;
-      }
-
-      if (!authData.user) {
-        console.warn('⚠️ register: No user returned despite no error');
-        throw new Error('Registration failed: No user data received');
-      }
-
-      console.log('✅ register: User created successfully:', authData.user.id);
-      
-      // Step 2: Immediately set the Supabase user in state
-      setSupabaseUser(authData.user);
-      
-      // Step 3: Create user profile in our database using upsert
-      console.log('📡 register: Creating user profile in database...');
-      const profileData = {
+      await supabase.from('users').upsert({
         id: authData.user.id,
-        email: userData.email,
-        role: userData.role,
-        first_name: userData.firstName,
-        last_name: userData.lastName,
-        company_name: userData.companyName || null,
-      };
-      
-      console.log('📋 register: Profile data to upsert:', profileData);
-      
-      // Create a timeout promise for the profile creation
-      const profileTimeoutPromise = createTimeoutPromise(10000, 'Profile creation timeout');
-      
-      const profilePromise = supabase
-        .from('users')
-        .upsert(profileData, { onConflict: 'id' })
-        .select()
-        .single();
-
-      const { data: profileResult, error: profileError } = await Promise.race([profilePromise, profileTimeoutPromise]);
-
-      console.log('📊 register: Profile creation result', { 
-        profileCreated: !!profileResult, 
-        error: profileError?.message 
+        email: data.email,
+        role: data.role,
+        first_name: data.firstName,
+        last_name: data.lastName,
+        company_name: data.companyName || null,
       });
-
-      if (profileError) {
-        console.error('❌ register: Profile creation failed:', profileError);
-        // If profile creation fails, we should sign out the user to maintain consistency
-        await supabase.auth.signOut();
-        throw new Error(`Profile creation failed: ${profileError.message}`);
-      }
-
-      if (!profileResult) {
-        console.error('❌ register: No profile data returned');
-        await supabase.auth.signOut();
-        throw new Error('Registration failed: Profile creation returned no data');
-      }
-
-      console.log('✅ register: Profile created successfully:', {
-        id: profileResult.id,
-        email: profileResult.email,
-        role: profileResult.role
-      });
-      
-      // Step 4: Immediately set the user profile in state for auto-login
-      setUser(profileResult);
-      
-      console.log('🎉 register: Registration completed successfully - user is now logged in');
-      
-    } catch (error) {
-      console.error('💥 register: Exception during registration:', error);
-      throw error; // Re-throw the error so the UI can handle it properly
+    } catch (err) {
+      handleSupabaseError(err);
+      throw err;
     } finally {
-      // CRITICAL FIX: Always set loading to false regardless of success or failure
       setIsLoading(false);
     }
   };
 
   const logout = async () => {
-    console.log('🚪 logout: Starting logout process...');
-    
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      
-      // Create a timeout promise for the logout request
-      const timeoutPromise = createTimeoutPromise(5000, 'Logout request timeout');
-      
-      const logoutPromise = supabase.auth.signOut();
-
-      const { error } = await Promise.race([logoutPromise, timeoutPromise]);
-      
-      if (error) {
-        console.error('❌ logout: Error during logout:', error);
-        throw error;
-      }
-      
-      console.log('✅ logout: Logout successful');
-      
-      // Clear state immediately
+      await supabase.auth.signOut();
       setUser(null);
-      setSupabaseUser(null);
-      
-    } catch (error) {
-      console.error('💥 logout: Exception during logout:', error);
-      handleSupabaseError(error);
+    } catch (err) {
+      handleSupabaseError(err);
     } finally {
       setIsLoading(false);
     }
   };
 
   const updateProfile = async (updates: Partial<UserProfile>) => {
-    if (!supabaseUser) {
-      console.error('❌ updateProfile: No authenticated user');
-      throw new Error('No authenticated user');
-    }
-
-    console.log('📝 updateProfile: Updating profile for user:', supabaseUser.id);
-    console.log('📋 updateProfile: Updates:', updates);
-
+    if (!supabaseUser) throw new Error('Not authenticated');
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      
-      // Use upsert to handle both creation and updates robustly
-      console.log('📡 updateProfile: Upserting profile...');
-      const profileData = {
-        id: supabaseUser.id,
-        email: supabaseUser.email || '',
-        ...updates
-      };
-      
-      // Create a timeout promise for the profile update
-      const timeoutPromise = createTimeoutPromise(10000, 'Profile update timeout');
-      
-      const updatePromise = supabase
+      const { data: updated, error } = await supabase
         .from('users')
-        .upsert(profileData, { onConflict: 'id' })
-        .select()
+        .upsert({ id: supabaseUser.id, ...updates })
         .single();
-
-      const { data, error } = await Promise.race([updatePromise, timeoutPromise]);
-
-      if (error) {
-        console.error('❌ updateProfile: Upsert failed:', error);
-        throw error;
-      }
-      
-      if (!data) {
-        throw new Error('Profile upsert returned no data');
-      }
-      
-      console.log('✅ updateProfile: Profile upserted successfully');
-      setUser(data);
-      
-    } catch (error) {
-      console.error('💥 updateProfile: Exception during update:', error);
-      handleSupabaseError(error);
-      throw error;
+      if (error) throw error;
+      setUser(updated);
+    } catch (err) {
+      handleSupabaseError(err);
+      throw err;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const value = {
-    user,
-    supabaseUser,
-    isLoading,
-    login,
-    register,
-    logout,
-    updateProfile,
-  };
-
-  console.log('🔄 AuthProvider: Current state', { 
-    hasUser: !!user, 
-    hasSupabaseUser: !!supabaseUser, 
-    isLoading,
-    userId: user?.id,
-    userRole: user?.role
-  });
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider
+      value={{ supabaseUser, user, isLoading, login, register, logout, updateProfile }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 }
