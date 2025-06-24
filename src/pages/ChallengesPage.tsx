@@ -215,11 +215,11 @@ export function ChallengesPage() {
         </div>
         
         <div className="flex items-center space-x-3">
-          <Button variant="outline">
+          <Button variant="outline" onClick={() => navigate('/my-badges')}>
             <Award className="h-4 w-4 mr-2" />
             My Badges
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" onClick={() => navigate('/leaderboard')}>
             <TrendingUp className="h-4 w-4 mr-2" />
             Leaderboard
           </Button>

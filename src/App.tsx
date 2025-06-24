@@ -22,6 +22,8 @@ import { RecruiterQuestsPage } from './pages/RecruiterQuestsPage';
 import { QuestSubmissionReviewPage } from './pages/QuestSubmissionReviewPage';
 import { QuestSubmissionsListPage } from './pages/QuestSubmissionsListPage';
 import { QuestSubmissionPage } from './pages/QuestSubmissionPage';
+import { MyBadgesPage } from './pages/MyBadgesPage';
+import { LeaderboardPage } from './pages/LeaderboardPage';
 
 function AppRoutes() {
   const { user, supabaseUser, isLoading } = useAuth();
@@ -144,6 +146,25 @@ function AppRoutes() {
           element={
             <ProtectedRoute requiredRole="candidate">
               <QuestSubmissionPage />
+            </ProtectedRoute>
+          }
+        />
+        
+        {/* Badges and Leaderboard (Candidates) */}
+        <Route
+          path="/my-badges"
+          element={
+            <ProtectedRoute requiredRole="candidate">
+              <MyBadgesPage />
+            </ProtectedRoute>
+          }
+        />
+        
+        <Route
+          path="/leaderboard"
+          element={
+            <ProtectedRoute>
+              <LeaderboardPage />
             </ProtectedRoute>
           }
         />

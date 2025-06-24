@@ -336,6 +336,76 @@ class QuestService {
     }
   }
 
+  // Leaderboard functionality
+  async getLeaderboard(timeframe: string = 'all-time', category: string = 'overall'): Promise<any[]> {
+    try {
+      // This is a placeholder implementation
+      // In a real implementation, you would create a Supabase view or RPC function
+      // to aggregate user performance data
+      
+      const { data: submissions, error } = await supabase
+        .from('quest_submissions')
+        .select(`
+          user_id,
+          score,
+          status,
+          submitted_at,
+          quests (category, difficulty)
+        `)
+        .eq('status', 'passed')
+        .order('submitted_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Get badges data
+      const { data: badges } = await supabase
+        .from('badges')
+        .select('user_id, level, rarity');
+
+      // Aggregate user performance
+      const userStats = submissions?.reduce((acc: any, submission: any) => {
+        const userId = submission.user_id;
+        
+        if (!acc[userId]) {
+          acc[userId] = {
+            userId,
+            displayName: `User ${userId.slice(-8)}`, // Anonymized display name
+            totalQuestsPassed: 0,
+            totalScore: 0,
+            averageScore: 0,
+            totalBadges: 0,
+            submissions: []
+          };
+        }
+        
+        acc[userId].totalQuestsPassed += 1;
+        acc[userId].totalScore += submission.score || 0;
+        acc[userId].submissions.push(submission);
+        
+        return acc;
+      }, {});
+
+      // Add badge counts
+      badges?.forEach((badge: any) => {
+        if (userStats[badge.user_id]) {
+          userStats[badge.user_id].totalBadges += 1;
+        }
+      });
+
+      // Calculate averages and sort
+      const leaderboard = Object.values(userStats || {}).map((user: any) => ({
+        ...user,
+        averageScore: user.totalQuestsPassed > 0 ? user.totalScore / user.totalQuestsPassed : 0,
+        totalScore: user.totalScore // Use total score for ranking
+      })).sort((a: any, b: any) => b.totalScore - a.totalScore);
+
+      return leaderboard;
+    } catch (error) {
+      handleSupabaseError(error);
+      return [];
+    }
+  }
+
   // Helper methods
   private async updateQuestStats(questId: string): Promise<void> {
     try {
