@@ -47,10 +47,11 @@ export function IndividualDashboard() {
     );
   }
 
-  // Calculate total views from all CVs
+  // Calculate total views from all CVs (including recruiter views)
   const totalViews = cvs.reduce((total, cv) => {
-    const views = cv.metadata?.totalViews || cv.metadata?.views || 0;
-    return total + views;
+    const publicViews = cv.metadata?.totalViews || cv.metadata?.views || 0;
+    const recruiterViews = cv.metadata?.recruiterViews || 0;
+    return total + publicViews + recruiterViews;
   }, 0);
 
   const stats = {
@@ -118,7 +119,9 @@ export function IndividualDashboard() {
           </CardHeader>
           <CardContent className="space-y-4">
             {cvs.slice(0, 3).map((cv) => {
-              const views = cv.metadata?.totalViews || cv.metadata?.views || 0;
+              const publicViews = cv.metadata?.totalViews || cv.metadata?.views || 0;
+              const recruiterViews = cv.metadata?.recruiterViews || 0;
+              const totalCVViews = publicViews + recruiterViews;
               const downloads = cv.metadata?.downloadCount || cv.metadata?.downloads || 0;
               const shares = cv.metadata?.shareCount || cv.metadata?.shares || 0;
               
@@ -129,7 +132,10 @@ export function IndividualDashboard() {
                     <div className="flex items-center space-x-4 text-sm text-gray-500 mt-1">
                       <span className="flex items-center">
                         <Eye className="h-4 w-4 mr-1" />
-                        {views} views
+                        {totalCVViews} views
+                        {recruiterViews > 0 && (
+                          <span className="ml-1 text-blue-600">({recruiterViews} recruiter)</span>
+                        )}
                       </span>
                       <span>Updated {new Date(cv.updated_at).toLocaleDateString()}</span>
                       {cv.is_public && (

@@ -170,6 +170,21 @@ class CVService {
     }
   }
 
+  // NEW: Increment recruiter view count
+  async incrementCVRecruiterView(cvId: string): Promise<boolean> {
+    try {
+      const { data, error } = await supabase.rpc('increment_cv_recruiter_view', {
+        cv_id: cvId
+      });
+
+      if (error) throw error;
+      return data || false;
+    } catch (error) {
+      console.error('Failed to increment recruiter view:', error);
+      return false;
+    }
+  }
+
   // CV Sections
   async updateCVSection(sectionId: string, updates: Partial<CVSection>): Promise<CVSection> {
     try {

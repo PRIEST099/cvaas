@@ -24,6 +24,7 @@ import { QuestSubmissionsListPage } from './pages/QuestSubmissionsListPage';
 import { QuestSubmissionPage } from './pages/QuestSubmissionPage';
 import { MyBadgesPage } from './pages/MyBadgesPage';
 import { LeaderboardPage } from './pages/LeaderboardPage';
+import { RecruiterCVViewPage } from './pages/RecruiterCVViewPage';
 
 function AppRoutes() {
   const { user, supabaseUser, isLoading } = useAuth();
@@ -175,6 +176,16 @@ function AppRoutes() {
           element={
             <ProtectedRoute requiredRole="recruiter">
               <TalentDiscoveryPage />
+            </ProtectedRoute>
+          }
+        />
+        
+        {/* Recruiter CV View */}
+        <Route
+          path="/talent/cv/:cvId"
+          element={
+            <ProtectedRoute requiredRole="recruiter">
+              <RecruiterCVViewPage />
             </ProtectedRoute>
           }
         />
