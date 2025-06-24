@@ -104,7 +104,7 @@ class QuestService {
     }
   }
 
-  // Quest Submissions - Updated to support recruiter filtering
+  // Quest Submissions - Updated to support recruiter filtering and prevent multiple active submissions
   async getSubmissions(options?: {
     questId?: string;
     userId?: string;
@@ -147,22 +147,76 @@ class QuestService {
     }
   }
 
+  // Get user's submission status for a specific quest
+  async getUserQuestSubmissionStatus(questId: string, userId?: string): Promise<{
+    hasSubmission: boolean;
+    latestSubmission?: QuestSubmission;
+    canSubmit: boolean;
+  }> {
+    try {
+      const user = await getCurrentUser();
+      const targetUserId = userId || user?.id;
+      
+      if (!targetUserId) throw new Error('User ID required');
+
+      const { data, error } = await supabase
+        .from('quest_submissions')
+        .select('*')
+        .eq('quest_id', questId)
+        .eq('user_id', targetUserId)
+        .order('attempt_number', { ascending: false })
+        .limit(1);
+
+      if (error) throw error;
+
+      const latestSubmission = data?.[0];
+      const hasSubmission = !!latestSubmission;
+      
+      // User can submit if:
+      // 1. No previous submission, OR
+      // 2. Latest submission was failed or needs revision
+      const canSubmit = !hasSubmission || 
+        (latestSubmission.status === 'failed' || latestSubmission.status === 'needs_revision');
+
+      return {
+        hasSubmission,
+        latestSubmission,
+        canSubmit
+      };
+    } catch (error) {
+      handleSupabaseError(error);
+      return { hasSubmission: false, canSubmit: true };
+    }
+  }
+
   async submitQuest(submission: Omit<QuestSubmissionInsert, 'user_id'>): Promise<QuestSubmission> {
     try {
       const user = await getCurrentUser();
       if (!user) throw new Error('Authentication required');
 
-      // Check if user has already submitted this quest
-      const { data: existingSubmission } = await supabase
+      // Check if user already has an active submission for this quest
+      const submissionStatus = await this.getUserQuestSubmissionStatus(submission.quest_id, user.id);
+      
+      if (!submissionStatus.canSubmit) {
+        const latestStatus = submissionStatus.latestSubmission?.status;
+        if (latestStatus === 'submitted' || latestStatus === 'under_review') {
+          throw new Error('You already have a pending submission for this quest. Please wait for review before submitting again.');
+        } else if (latestStatus === 'passed') {
+          throw new Error('You have already passed this quest.');
+        }
+      }
+
+      // Determine attempt number
+      const { data: existingSubmissions } = await supabase
         .from('quest_submissions')
         .select('attempt_number')
         .eq('quest_id', submission.quest_id)
         .eq('user_id', user.id)
         .order('attempt_number', { ascending: false })
-        .limit(1)
-        .single();
+        .limit(1);
 
-      const attemptNumber = existingSubmission ? existingSubmission.attempt_number + 1 : 1;
+      const attemptNumber = existingSubmissions?.[0]?.attempt_number ? 
+        existingSubmissions[0].attempt_number + 1 : 1;
 
       const { data, error } = await supabase
         .from('quest_submissions')

@@ -12,7 +12,11 @@ import {
   Clock,
   Users,
   Play,
-  CheckCircle
+  CheckCircle,
+  Eye,
+  RefreshCw,
+  XCircle,
+  AlertTriangle
 } from 'lucide-react';
 import { questService } from '../services/questService';
 import { useAuth } from '../contexts/AuthContext';
@@ -26,6 +30,7 @@ export function ChallengesPage() {
   const navigate = useNavigate();
   const [challenges, setChallenges] = useState([]);
   const [filteredChallenges, setFilteredChallenges] = useState([]);
+  const [userSubmissions, setUserSubmissions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -58,8 +63,12 @@ export function ChallengesPage() {
   const loadChallenges = async () => {
     try {
       setIsLoading(true);
-      const challengesData = await questService.getQuests();
+      const [challengesData, submissionsData] = await Promise.all([
+        questService.getQuests(),
+        user ? questService.getSubmissions() : Promise.resolve([])
+      ]);
       setChallenges(challengesData);
+      setUserSubmissions(submissionsData);
     } catch (error) {
       console.error('Failed to load challenges:', error);
     } finally {
@@ -94,8 +103,96 @@ export function ChallengesPage() {
     setFilteredChallenges(filtered);
   };
 
-  const handleStartChallenge = (challenge) => {
-    navigate(`/challenges/${challenge.id}/submit`);
+  const getUserSubmissionForQuest = (questId: string) => {
+    return userSubmissions
+      .filter(sub => sub.quest_id === questId)
+      .sort((a, b) => b.attempt_number - a.attempt_number)[0]; // Get latest attempt
+  };
+
+  const getQuestButtonConfig = (challenge: any) => {
+    if (!user) {
+      return {
+        text: 'Sign In to Start',
+        icon: Play,
+        action: () => navigate('/login'),
+        disabled: false,
+        variant: 'outline' as const
+      };
+    }
+
+    const submission = getUserSubmissionForQuest(challenge.id);
+    
+    if (!submission) {
+      return {
+        text: 'Start Challenge',
+        icon: Play,
+        action: () => navigate(`/challenges/${challenge.id}/submit`),
+        disabled: !challenge.is_active,
+        variant: 'primary' as const
+      };
+    }
+
+    switch (submission.status) {
+      case 'submitted':
+      case 'under_review':
+        return {
+          text: 'Under Review',
+          icon: RefreshCw,
+          action: () => {}, // No action for pending submissions
+          disabled: true,
+          variant: 'outline' as const
+        };
+      case 'passed':
+        return {
+          text: 'Completed',
+          icon: CheckCircle,
+          action: () => {}, // Could navigate to badge or results
+          disabled: true,
+          variant: 'outline' as const
+        };
+      case 'failed':
+      case 'needs_revision':
+        return {
+          text: 'Retake Challenge',
+          icon: RefreshCw,
+          action: () => navigate(`/challenges/${challenge.id}/submit`),
+          disabled: !challenge.is_active,
+          variant: 'primary' as const
+        };
+      default:
+        return {
+          text: 'Start Challenge',
+          icon: Play,
+          action: () => navigate(`/challenges/${challenge.id}/submit`),
+          disabled: !challenge.is_active,
+          variant: 'primary' as const
+        };
+    }
+  };
+
+  const getSubmissionStatusBadge = (challenge: any) => {
+    if (!user) return null;
+    
+    const submission = getUserSubmissionForQuest(challenge.id);
+    if (!submission) return null;
+
+    const statusConfig = {
+      submitted: { color: 'bg-blue-100 text-blue-800', icon: Clock, text: 'Submitted' },
+      under_review: { color: 'bg-yellow-100 text-yellow-800', icon: RefreshCw, text: 'Under Review' },
+      passed: { color: 'bg-green-100 text-green-800', icon: CheckCircle, text: `Passed (${submission.score}%)` },
+      failed: { color: 'bg-red-100 text-red-800', icon: XCircle, text: 'Failed' },
+      needs_revision: { color: 'bg-orange-100 text-orange-800', icon: AlertTriangle, text: 'Needs Revision' }
+    };
+
+    const config = statusConfig[submission.status] || statusConfig.submitted;
+    const Icon = config.icon;
+
+    return (
+      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${config.color}`}>
+        <Icon className="h-3 w-3 mr-1" />
+        {config.text}
+      </span>
+    );
   };
 
   if (isLoading) {
@@ -229,99 +326,107 @@ export function ChallengesPage() {
       {/* Challenges Grid */}
       {filteredChallenges.length > 0 ? (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredChallenges.map((challenge) => (
-            <Card key={challenge.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <Code className="h-5 w-5 text-blue-600" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-lg text-gray-900 line-clamp-2">{challenge.title}</h3>
-                      <p className="text-sm text-gray-600 mt-1 line-clamp-2">{challenge.description}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex flex-col items-end space-y-2">
-                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                      challenge.difficulty === 'beginner' ? 'bg-green-100 text-green-800' :
-                      challenge.difficulty === 'intermediate' ? 'bg-yellow-100 text-yellow-800' :
-                      challenge.difficulty === 'advanced' ? 'bg-orange-100 text-orange-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
-                      {challenge.difficulty.charAt(0).toUpperCase() + challenge.difficulty.slice(1)}
-                    </span>
-                  </div>
-                </div>
-              </CardHeader>
-
-              <CardContent>
-                <div className="space-y-4">
-                  {/* Skills Assessed */}
-                  <div className="mb-4">
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">Skills Assessed</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {(challenge.skills_assessed || []).slice(0, 4).map((skill, index) => (
-                        <span
-                          key={index}
-                          className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800"
-                        >
-                          {skill}
-                        </span>
-                      ))}
-                      {(challenge.skills_assessed || []).length > 4 && (
-                        <span className="text-xs text-gray-500">
-                          +{(challenge.skills_assessed || []).length - 4} more
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Challenge Stats */}
-                  <div className="grid grid-cols-3 gap-4 mb-4 text-center">
-                    <div>
-                      <div className="flex items-center justify-center mb-1">
-                        <Clock className="h-4 w-4 text-gray-500 mr-1" />
-                        <span className="text-sm font-semibold text-gray-900">
-                          {challenge.estimated_time ? `${challenge.estimated_time}m` : 'No limit'}
-                        </span>
+          {filteredChallenges.map((challenge) => {
+            const buttonConfig = getQuestButtonConfig(challenge);
+            const statusBadge = getSubmissionStatusBadge(challenge);
+            const ButtonIcon = buttonConfig.icon;
+            
+            return (
+              <Card key={challenge.id} className="hover:shadow-lg transition-shadow">
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 bg-blue-100 rounded-lg">
+                        <Code className="h-5 w-5 text-blue-600" />
                       </div>
-                      <div className="text-xs text-gray-600">Time Limit</div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg text-gray-900 line-clamp-2">{challenge.title}</h3>
+                        <p className="text-sm text-gray-600 mt-1 line-clamp-2">{challenge.description}</p>
+                      </div>
                     </div>
                     
-                    <div>
-                      <div className="flex items-center justify-center mb-1">
-                        <Users className="h-4 w-4 text-gray-500 mr-1" />
-                        <span className="text-sm font-semibold text-gray-900">{challenge.total_attempts}</span>
-                      </div>
-                      <div className="text-xs text-gray-600">Attempts</div>
-                    </div>
-                    
-                    <div>
-                      <div className="flex items-center justify-center mb-1">
-                        <TrendingUp className="h-4 w-4 text-gray-500 mr-1" />
-                        <span className="text-sm font-semibold text-gray-900">
-                          {Math.round((challenge.success_rate || 0) * 100)}%
-                        </span>
-                      </div>
-                      <div className="text-xs text-gray-600">Success Rate</div>
+                    <div className="flex flex-col items-end space-y-2">
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        challenge.difficulty === 'beginner' ? 'bg-green-100 text-green-800' :
+                        challenge.difficulty === 'intermediate' ? 'bg-yellow-100 text-yellow-800' :
+                        challenge.difficulty === 'advanced' ? 'bg-orange-100 text-orange-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {challenge.difficulty.charAt(0).toUpperCase() + challenge.difficulty.slice(1)}
+                      </span>
+                      {statusBadge}
                     </div>
                   </div>
+                </CardHeader>
 
-                  {/* Action Button */}
-                  <Button
-                    onClick={() => handleStartChallenge(challenge)}
-                    className="w-full"
-                    disabled={!challenge.is_active}
-                  >
-                    <Play className="h-4 w-4 mr-2" />
-                    Start Challenge
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                <CardContent>
+                  <div className="space-y-4">
+                    {/* Skills Assessed */}
+                    <div className="mb-4">
+                      <h4 className="text-sm font-medium text-gray-700 mb-2">Skills Assessed</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {(challenge.skills_assessed || []).slice(0, 4).map((skill, index) => (
+                          <span
+                            key={index}
+                            className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800"
+                          >
+                            {skill}
+                          </span>
+                        ))}
+                        {(challenge.skills_assessed || []).length > 4 && (
+                          <span className="text-xs text-gray-500">
+                            +{(challenge.skills_assessed || []).length - 4} more
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Challenge Stats */}
+                    <div className="grid grid-cols-3 gap-4 mb-4 text-center">
+                      <div>
+                        <div className="flex items-center justify-center mb-1">
+                          <Clock className="h-4 w-4 text-gray-500 mr-1" />
+                          <span className="text-sm font-semibold text-gray-900">
+                            {challenge.estimated_time ? `${challenge.estimated_time}m` : 'No limit'}
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-600">Time Limit</div>
+                      </div>
+                      
+                      <div>
+                        <div className="flex items-center justify-center mb-1">
+                          <Users className="h-4 w-4 text-gray-500 mr-1" />
+                          <span className="text-sm font-semibold text-gray-900">{challenge.total_attempts}</span>
+                        </div>
+                        <div className="text-xs text-gray-600">Attempts</div>
+                      </div>
+                      
+                      <div>
+                        <div className="flex items-center justify-center mb-1">
+                          <TrendingUp className="h-4 w-4 text-gray-500 mr-1" />
+                          <span className="text-sm font-semibold text-gray-900">
+                            {Math.round((challenge.success_rate || 0) * 100)}%
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-600">Success Rate</div>
+                      </div>
+                    </div>
+
+                    {/* Action Button */}
+                    <Button
+                      onClick={buttonConfig.action}
+                      className="w-full"
+                      disabled={buttonConfig.disabled}
+                      variant={buttonConfig.variant}
+                    >
+                      <ButtonIcon className="h-4 w-4 mr-2" />
+                      {buttonConfig.text}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       ) : (
         <div className="text-center py-12">
@@ -353,7 +458,9 @@ export function ChallengesPage() {
         <Card>
           <CardContent className="p-6 text-center">
             <Award className="h-8 w-8 text-yellow-600 mx-auto mb-2" />
-            <div className="text-2xl font-bold text-gray-900">0</div>
+            <div className="text-2xl font-bold text-gray-900">
+              {userSubmissions.filter(s => s.status === 'passed').length}
+            </div>
             <div className="text-sm text-gray-600">Badges Earned</div>
           </CardContent>
         </Card>
