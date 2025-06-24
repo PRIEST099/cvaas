@@ -217,7 +217,7 @@ export function WidgetPage() {
 
               {/* Display Options */}
               <div className="space-y-3">
-                <label className="flex items-center">
+                {/* <label className="flex items-center">
                   <input
                     type="checkbox"
                     checked={widgetConfig.showPhoto}
@@ -225,7 +225,7 @@ export function WidgetPage() {
                     className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
                   <span className="ml-2 text-sm text-gray-700">Show profile photo</span>
-                </label>
+                </label> */}
 
                 <label className="flex items-center">
                   <input
