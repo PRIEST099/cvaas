@@ -100,7 +100,7 @@ export function BusinessDashboard() {
           <CardHeader className="flex flex-row items-center justify-between">
             <h2 className="text-xl font-semibold">Recent Quests</h2>
             <Button size="sm">
-              <Link to="/challenges" className="flex items-center">
+              <Link to="/challenges/new" className="flex items-center">
                 <Plus className="h-4 w-4 mr-1" />
                 New Quest
               </Link>
@@ -147,12 +147,12 @@ export function BusinessDashboard() {
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No quests yet</h3>
                 <p className="text-gray-600 mb-4">Create your first quest to start evaluating candidates</p>
                 <Button>
-                  <Link to="/challenges">Create Quest</Link>
+                  <Link to="/challenges/new">Create Quest</Link>
                 </Button>
               </div>
             )}
             <Button variant="outline" className="w-full">
-              <Link to="/challenges">View All Quests</Link>
+              <Link to="/recruiter/quests">View All Quests</Link>
             </Button>
           </CardContent>
         </Card>
@@ -162,7 +162,7 @@ export function BusinessDashboard() {
           <CardHeader className="flex flex-row items-center justify-between">
             <h2 className="text-xl font-semibold">Recent Submissions</h2>
             <Button size="sm" variant="outline">
-              <Link to="/talent">View All</Link>
+              <Link to="/submissions">View All</Link>
             </Button>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -224,7 +224,7 @@ export function BusinessDashboard() {
               </Link>
             </Button>
             <Button variant="outline" className="h-20 flex-col space-y-2">
-              <Link to="/challenges" className="flex flex-col items-center space-y-2">
+              <Link to="/challenges/new" className="flex flex-col items-center space-y-2">
                 <Target className="h-6 w-6" />
                 <span>Create Quest</span>
               </Link>
