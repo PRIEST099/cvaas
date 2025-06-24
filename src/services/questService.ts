@@ -104,26 +104,37 @@ class QuestService {
     }
   }
 
-  // Quest Submissions (Candidates)
-  async getSubmissions(questId?: string, userId?: string): Promise<QuestSubmission[]> {
+  // Quest Submissions - Updated to support recruiter filtering
+  async getSubmissions(options?: {
+    questId?: string;
+    userId?: string;
+    forRecruiter?: boolean;
+  }): Promise<QuestSubmission[]> {
     try {
       const user = await getCurrentUser();
-      const targetUserId = userId || user?.id;
+      if (!user) throw new Error('Authentication required');
 
       let query = supabase
         .from('quest_submissions')
         .select(`
           *,
-          quests (title, category, difficulty)
+          quests (title, category, difficulty, created_by)
         `)
         .order('submitted_at', { ascending: false });
 
-      if (questId) {
-        query = query.eq('quest_id', questId);
+      if (options?.forRecruiter) {
+        // For recruiters: get submissions to quests they created
+        query = query.eq('quests.created_by', user.id);
+      } else if (options?.userId) {
+        // For specific user submissions
+        query = query.eq('user_id', options.userId);
+      } else {
+        // Default: get submissions by current user (for candidates)
+        query = query.eq('user_id', user.id);
       }
 
-      if (targetUserId) {
-        query = query.eq('user_id', targetUserId);
+      if (options?.questId) {
+        query = query.eq('quest_id', options.questId);
       }
 
       const { data, error } = await query;

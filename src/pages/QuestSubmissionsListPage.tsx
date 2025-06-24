@@ -57,18 +57,14 @@ export function QuestSubmissionsListPage() {
   const loadData = async () => {
     try {
       setIsLoading(true);
+      
+      // Load submissions for this recruiter and their quests
       const [submissionsData, questsData] = await Promise.all([
-        questService.getSubmissions(),
+        questService.getSubmissions({ forRecruiter: true }),
         questService.getQuests(user?.id)
       ]);
       
-      // Filter submissions to only show those for quests created by this recruiter
-      const recruiterQuestIds = questsData.map(q => q.id);
-      const recruiterSubmissions = submissionsData.filter(s => 
-        recruiterQuestIds.includes(s.quest_id)
-      );
-      
-      setSubmissions(recruiterSubmissions);
+      setSubmissions(submissionsData);
       setQuests(questsData);
     } catch (error) {
       console.error('Failed to load submissions:', error);
