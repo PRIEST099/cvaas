@@ -69,15 +69,15 @@ export function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center py-8 sm:py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-6 sm:space-y-8">
         {/* Header */}
         <div className="text-center">
-          <Link to="/" className="inline-flex items-center space-x-2 mb-6">
-            <FileText className="h-10 w-10 text-blue-600" />
-            <span className="text-2xl font-bold text-gray-900">CVaaS</span>
+          <Link to="/" className="inline-flex items-center space-x-2 mb-4 sm:mb-6">
+            <FileText className="h-8 w-8 sm:h-10 sm:w-10 text-blue-600" />
+            <span className="text-xl sm:text-2xl font-bold text-gray-900">CVaaS</span>
           </Link>
-          <h2 className="text-3xl font-bold text-gray-900">Create your account</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Create your account</h2>
           <p className="mt-2 text-gray-600">Join thousands of professionals</p>
         </div>
 
@@ -89,9 +89,9 @@ export function RegisterPage() {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center">
-                  <AlertCircle className="h-5 w-5 mr-2" />
-                  {error}
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-start">
+                  <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5" />
+                  <span className="text-sm">{error}</span>
                 </div>
               )}
 
@@ -100,7 +100,7 @@ export function RegisterPage() {
                 <label className="block text-sm font-medium text-gray-700">
                   Account Type
                 </label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <button
                     type="button"
                     className={`p-4 border rounded-lg text-left transition-colors ${
@@ -130,7 +130,7 @@ export function RegisterPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Input
                   label="First name"
                   value={formData.firstName}
@@ -197,7 +197,7 @@ export function RegisterPage() {
                 <input
                   type="checkbox"
                   required
-                  className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0"
                 />
                 <span className="ml-2 text-sm text-gray-600">
                   I agree to the{' '}

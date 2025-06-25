@@ -44,25 +44,28 @@ export function EmbeddableCVRenderer({ cv, widgetConfig, className = '' }: Embed
     if (!section?.content) return null;
     return (
       <div className="text-center mb-4">
-        <h1 className="text-xl font-bold mb-1">{section.content.fullName}</h1>
+        <h1 className="text-lg sm:text-xl font-bold mb-1">{section.content.fullName}</h1>
         {section.content.title && (
-          <p className="text-small text-blue-600 font-small mb-2">{section.content.title}</p>
+          <p className="text-sm text-blue-600 font-medium mb-2">{section.content.title}</p>
         )}
         {config.showContact && (
-          <div className="flex justify-center space-x-4 text-gray-700 text-xs">
+          <div className="flex flex-col sm:flex-row sm:justify-center sm:space-x-4 space-y-1 sm:space-y-0 text-gray-700 text-xs">
             {section.content.email && (
-              <div className="flex items-center">
-                <Mail className="w-3 h-3 mr-1 text-blue-600" />{section.content.email}
+              <div className="flex items-center justify-center sm:justify-start">
+                <Mail className="w-3 h-3 mr-1 text-blue-600 flex-shrink-0" />
+                <span className="truncate">{section.content.email}</span>
               </div>
             )}
             {section.content.phone && (
-              <div className="flex items-center">
-                <Phone className="w-3 h-3 mr-1 text-blue-600" />{section.content.phone}
+              <div className="flex items-center justify-center sm:justify-start">
+                <Phone className="w-3 h-3 mr-1 text-blue-600 flex-shrink-0" />
+                <span>{section.content.phone}</span>
               </div>
             )}
             {section.content.location && (
-              <div className="flex items-center">
-                <MapPin className="w-3 h-3 mr-1 text-blue-600" />{section.content.location}
+              <div className="flex items-center justify-center sm:justify-start">
+                <MapPin className="w-3 h-3 mr-1 text-blue-600 flex-shrink-0" />
+                <span>{section.content.location}</span>
               </div>
             )}
           </div>
@@ -73,7 +76,7 @@ export function EmbeddableCVRenderer({ cv, widgetConfig, className = '' }: Embed
   };
 
   const renderSectionHeader = (title: string) => (
-    <h2 className="text-xl font-bold text-blue-600 mb-2">{title}</h2>
+    <h2 className="text-lg sm:text-xl font-bold text-blue-600 mb-2">{title}</h2>
   );
 
   const renderSummarySection = (section: any) => {
@@ -81,7 +84,7 @@ export function EmbeddableCVRenderer({ cv, widgetConfig, className = '' }: Embed
     return (
       <div className="mb-4">
         {renderSectionHeader('Professional Summary')}
-        <p className="leading-relaxed whitespace-pre-line text-gray-800 text-[0.7rem]">{section.content.summary}</p>
+        <p className="leading-relaxed whitespace-pre-line text-gray-800 text-xs sm:text-sm">{section.content.summary}</p>
         <hr className="border-t border-gray-300 mt-3 mb-4" />
       </div>
     );
@@ -90,17 +93,15 @@ export function EmbeddableCVRenderer({ cv, widgetConfig, className = '' }: Embed
   const renderEducationSection = (section: any) => {
     const education = section?.content?.education || cv.education || [];
     if (!education.length) return null;
-    console.log('Education data:', section?.content?.education || cv.education);
 
     return (
       <div className="mb-4">
         {renderSectionHeader('Education')}
         {education.map((edu: any, idx: number) => (
           <div key={idx} className="mb-2">
-            <div className="flex justify-between text-sm">
+            <div className="flex flex-col sm:flex-row sm:justify-between text-sm space-y-1 sm:space-y-0">
               <span className="font-semibold text-gray-900">{edu.institution}</span>
               <span className="italic text-gray-500 text-xs">
-               {/* {edu.startDate} -  */}
                {edu.isCurrent ? 'Present' : edu.end_date || edu.graduationYear}
               </span>
             </div>
@@ -120,14 +121,14 @@ export function EmbeddableCVRenderer({ cv, widgetConfig, className = '' }: Embed
         {renderSectionHeader('Work Experience')}
         {experiences.map((exp: any, idx: number) => (
           <div key={idx} className="mb-3">
-            <div className="flex justify-between mb-1 text-sm">
+            <div className="flex flex-col sm:flex-row sm:justify-between mb-1 text-sm space-y-1 sm:space-y-0">
               <span className="font-semibold text-gray-900">{exp.position}</span>
               <span className="italic text-gray-500 text-xs">
                 {exp.startDate} - {exp.isCurrent ? 'Present' : exp.endDate}
               </span>
             </div>
             <div className="text-gray-700 text-xs mb-1">{exp.company}</div>
-            <ul className="list-disc ml-4 text-gray-800 text-xs">
+            <ul className="list-disc ml-4 text-gray-800 text-xs space-y-1">
               {exp.description?.split('\n').map((line: string, i: number) => (
                 <li key={i}>{line}</li>
               ))}
@@ -145,7 +146,7 @@ export function EmbeddableCVRenderer({ cv, widgetConfig, className = '' }: Embed
     return (
       <div className="mb-4">
         {renderSectionHeader('Skills')}
-        <p className="text-gray-800 text-xs">{skills.join(', ')}</p>
+        <p className="text-gray-800 text-xs break-words">{skills.join(', ')}</p>
         <hr className="border-t border-gray-300 mt-2 mb-4" />
       </div>
     );
@@ -160,7 +161,7 @@ export function EmbeddableCVRenderer({ cv, widgetConfig, className = '' }: Embed
         {projects.map((project: any, index: number) => (
           <div key={index} className="mb-2">
             <span className="font-semibold text-gray-900 text-sm">{project.title}</span>
-            <ul className="list-disc ml-4 text-gray-800 text-xs mt-1">
+            <ul className="list-disc ml-4 text-gray-800 text-xs mt-1 space-y-1">
               {project.description?.split('\n').map((line: string, i: number) => (
                 <li key={i}>{line}</li>
               ))}
@@ -180,7 +181,7 @@ export function EmbeddableCVRenderer({ cv, widgetConfig, className = '' }: Embed
     .map(type => sectionsMap[type]);
 
   return (
-    <div className={`relative ${themeClasses[config.theme]} ${sizeClasses[config.size]} ${className} p-6 max-w-2xl mx-auto font-sans`}>
+    <div className={`relative ${themeClasses[config.theme]} ${sizeClasses[config.size]} ${className} p-4 sm:p-6 max-w-2xl mx-auto font-sans`}>
       <div className="absolute inset-0 bg-[url('/paper-texture.png')] bg-cover opacity-20 -z-10" />
       {orderedSections.map((section: any) => {
         switch (section.section_type) {

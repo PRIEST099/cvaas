@@ -204,22 +204,22 @@ export function ChallengesPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6 sm:mb-8 space-y-4 lg:space-y-0">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Skill Challenges</h1>
-          <p className="text-gray-600 mt-2">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Skill Challenges</h1>
+          <p className="text-gray-600 mt-2 text-sm sm:text-base">
             Complete challenges to earn blockchain-verified skill badges and showcase your abilities
           </p>
         </div>
         
-        <div className="flex items-center space-x-3">
-          <Button variant="outline" onClick={() => navigate('/my-badges')}>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-3">
+          <Button variant="outline" onClick={() => navigate('/my-badges')} className="w-full sm:w-auto">
             <Award className="h-4 w-4 mr-2" />
             My Badges
           </Button>
-          <Button variant="outline" onClick={() => navigate('/leaderboard')}>
+          <Button variant="outline" onClick={() => navigate('/leaderboard')} className="w-full sm:w-auto">
             <TrendingUp className="h-4 w-4 mr-2" />
             Leaderboard
           </Button>
@@ -227,14 +227,14 @@ export function ChallengesPage() {
       </div>
 
       {/* Filters */}
-      <Card className="mb-8">
+      <Card className="mb-6 sm:mb-8">
         <CardHeader>
           <h3 className="font-semibold">Find Challenges</h3>
         </CardHeader>
         <CardContent>
-          <div className="grid md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Search */}
-            <div className="md:col-span-2">
+            <div className="sm:col-span-2">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
@@ -280,13 +280,13 @@ export function ChallengesPage() {
       </Card>
 
       {/* Category Tabs */}
-      <div className="flex items-center space-x-1 mb-8 border-b border-gray-200">
+      <div className="flex items-center space-x-1 mb-6 sm:mb-8 border-b border-gray-200 overflow-x-auto">
         {categories.map((category) => {
           const Icon = category.icon;
           return (
             <button
               key={category.value}
-              className={`flex items-center px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              className={`flex items-center px-3 sm:px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                 selectedCategory === category.value
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -294,7 +294,8 @@ export function ChallengesPage() {
               onClick={() => setSelectedCategory(category.value)}
             >
               <Icon className="h-4 w-4 mr-2" />
-              {category.label}
+              <span className="hidden sm:inline">{category.label}</span>
+              <span className="sm:hidden">{category.label.split(' ')[0]}</span>
               <span className="ml-2 bg-gray-100 text-gray-600 px-2 py-1 rounded-full text-xs">
                 {category.value === 'all' 
                   ? challenges.length 
@@ -307,8 +308,8 @@ export function ChallengesPage() {
       </div>
 
       {/* Results Summary */}
-      <div className="flex items-center justify-between mb-6">
-        <p className="text-gray-600">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 space-y-2 sm:space-y-0">
+        <p className="text-gray-600 text-sm sm:text-base">
           Showing {filteredChallenges.length} of {challenges.length} challenges
         </p>
         
@@ -325,7 +326,7 @@ export function ChallengesPage() {
 
       {/* Challenges Grid */}
       {filteredChallenges.length > 0 ? (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
           {filteredChallenges.map((challenge) => {
             const buttonConfig = getQuestButtonConfig(challenge);
             const statusBadge = getSubmissionStatusBadge(challenge);
@@ -335,17 +336,17 @@ export function ChallengesPage() {
               <Card key={challenge.id} className="hover:shadow-lg transition-shadow">
                 <CardHeader>
                   <div className="flex items-start justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-blue-100 rounded-lg">
+                    <div className="flex items-start space-x-3 flex-1 min-w-0">
+                      <div className="p-2 bg-blue-100 rounded-lg flex-shrink-0">
                         <Code className="h-5 w-5 text-blue-600" />
                       </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-lg text-gray-900 line-clamp-2">{challenge.title}</h3>
-                        <p className="text-sm text-gray-600 mt-1 line-clamp-2">{challenge.description}</p>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-lg text-gray-900 line-clamp-2 mb-1">{challenge.title}</h3>
+                        <p className="text-sm text-gray-600 line-clamp-2">{challenge.description}</p>
                       </div>
                     </div>
                     
-                    <div className="flex flex-col items-end space-y-2">
+                    <div className="flex flex-col items-end space-y-2 flex-shrink-0 ml-2">
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                         challenge.difficulty === 'beginner' ? 'bg-green-100 text-green-800' :
                         challenge.difficulty === 'intermediate' ? 'bg-yellow-100 text-yellow-800' :
@@ -382,7 +383,7 @@ export function ChallengesPage() {
                     </div>
 
                     {/* Challenge Stats */}
-                    <div className="grid grid-cols-3 gap-4 mb-4 text-center">
+                    <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 text-center">
                       <div>
                         <div className="flex items-center justify-center mb-1">
                           <Clock className="h-4 w-4 text-gray-500 mr-1" />
@@ -446,42 +447,42 @@ export function ChallengesPage() {
       )}
 
       {/* Stats Section */}
-      <div className="mt-12 grid md:grid-cols-4 gap-6">
+      <div className="mt-12 grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <Card>
-          <CardContent className="p-6 text-center">
-            <Target className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-            <div className="text-2xl font-bold text-gray-900">{challenges.length}</div>
-            <div className="text-sm text-gray-600">Total Challenges</div>
+          <CardContent className="p-4 sm:p-6 text-center">
+            <Target className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 mx-auto mb-2" />
+            <div className="text-xl sm:text-2xl font-bold text-gray-900">{challenges.length}</div>
+            <div className="text-xs sm:text-sm text-gray-600">Total Challenges</div>
           </CardContent>
         </Card>
         
         <Card>
-          <CardContent className="p-6 text-center">
-            <Award className="h-8 w-8 text-yellow-600 mx-auto mb-2" />
-            <div className="text-2xl font-bold text-gray-900">
+          <CardContent className="p-4 sm:p-6 text-center">
+            <Award className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-600 mx-auto mb-2" />
+            <div className="text-xl sm:text-2xl font-bold text-gray-900">
               {userSubmissions.filter(s => s.status === 'passed').length}
             </div>
-            <div className="text-sm text-gray-600">Badges Earned</div>
+            <div className="text-xs sm:text-sm text-gray-600">Badges Earned</div>
           </CardContent>
         </Card>
         
         <Card>
-          <CardContent className="p-6 text-center">
-            <TrendingUp className="h-8 w-8 text-green-600 mx-auto mb-2" />
-            <div className="text-2xl font-bold text-gray-900">
+          <CardContent className="p-4 sm:p-6 text-center">
+            <TrendingUp className="h-6 w-6 sm:h-8 sm:w-8 text-green-600 mx-auto mb-2" />
+            <div className="text-xl sm:text-2xl font-bold text-gray-900">
               {challenges.length > 0 ? Math.round(challenges.reduce((sum, c) => sum + (c.success_rate || 0), 0) / challenges.length * 100) : 0}%
             </div>
-            <div className="text-sm text-gray-600">Avg Success Rate</div>
+            <div className="text-xs sm:text-sm text-gray-600">Avg Success Rate</div>
           </CardContent>
         </Card>
         
         <Card>
-          <CardContent className="p-6 text-center">
-            <Clock className="h-8 w-8 text-purple-600 mx-auto mb-2" />
-            <div className="text-2xl font-bold text-gray-900">
+          <CardContent className="p-4 sm:p-6 text-center">
+            <Clock className="h-6 w-6 sm:h-8 sm:w-8 text-purple-600 mx-auto mb-2" />
+            <div className="text-xl sm:text-2xl font-bold text-gray-900">
               {challenges.length > 0 ? Math.round(challenges.reduce((sum, c) => sum + (c.estimated_time || 0), 0) / challenges.length) : 0}m
             </div>
-            <div className="text-sm text-gray-600">Avg Completion Time</div>
+            <div className="text-xs sm:text-sm text-gray-600">Avg Completion Time</div>
           </CardContent>
         </Card>
       </div>

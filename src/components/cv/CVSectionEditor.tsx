@@ -13,9 +13,9 @@ export function CVSectionEditor({ section, onUpdate }: CVSectionEditorProps) {
   if (!section) {
     return (
       <Card>
-        <CardContent className="p-8 text-center">
+        <CardContent className="p-6 sm:p-8 text-center">
           <div className="text-gray-400 mb-4">
-            <User className="h-12 w-12 mx-auto" />
+            <User className="h-8 w-8 sm:h-12 sm:w-12 mx-auto" />
           </div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">Select a section to edit</h3>
           <p className="text-gray-600">Choose a section from the sidebar to start editing your CV.</p>
@@ -29,7 +29,7 @@ export function CVSectionEditor({ section, onUpdate }: CVSectionEditorProps) {
       case 'personal_info':
         return (
           <div className="space-y-6">
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               <div className="space-y-4">
                 <Input
                   label="Full Name"
@@ -119,7 +119,7 @@ export function CVSectionEditor({ section, onUpdate }: CVSectionEditorProps) {
                 placeholder="Write a compelling summary of your professional background, key achievements, and career objectives. Highlight your unique value proposition and what makes you stand out..."
                 className="w-full h-32 p-4 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm leading-relaxed"
               />
-              <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
+              <div className="mt-2 flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs text-gray-500 space-y-1 sm:space-y-0">
                 <span>Tip: Keep it concise but impactful (2-3 sentences)</span>
                 <span>{(section.content.summary || '').length} characters</span>
               </div>
@@ -132,13 +132,13 @@ export function CVSectionEditor({ section, onUpdate }: CVSectionEditorProps) {
           <div className="space-y-6">
             {(section.content.experiences || []).map((exp: any, index: number) => (
               <Card key={index} className="border-l-4 border-l-blue-500">
-                <CardHeader className="flex flex-row items-center justify-between pb-3">
+                <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-3 space-y-2 sm:space-y-0">
                   <div className="flex items-center space-x-2">
-                    <Building className="h-5 w-5 text-blue-600" />
+                    <Building className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <h4 className="font-medium">Experience {index + 1}</h4>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Button variant="ghost" size="sm">
+                    <Button variant="ghost" size="sm" className="p-1">
                       <GripVertical className="h-4 w-4" />
                     </Button>
                     <Button 
@@ -149,13 +149,14 @@ export function CVSectionEditor({ section, onUpdate }: CVSectionEditorProps) {
                         experiences.splice(index, 1);
                         onUpdate({ content: { ...section.content, experiences } });
                       }}
+                      className="p-1"
                     >
                       <Trash2 className="h-4 w-4 text-red-500" />
                     </Button>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <Input
                       label="Job Title"
                       value={exp.position || ''}
@@ -178,7 +179,7 @@ export function CVSectionEditor({ section, onUpdate }: CVSectionEditorProps) {
                     />
                   </div>
                   
-                  <div className="grid md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     <Input
                       label="Location"
                       value={exp.location || ''}
@@ -279,13 +280,13 @@ export function CVSectionEditor({ section, onUpdate }: CVSectionEditorProps) {
           <div className="space-y-6">
             {(section.content.education || []).map((edu: any, index: number) => (
               <Card key={index} className="border-l-4 border-l-green-500">
-                <CardHeader className="flex flex-row items-center justify-between pb-3">
+                <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-3 space-y-2 sm:space-y-0">
                   <div className="flex items-center space-x-2">
-                    <Award className="h-5 w-5 text-green-600" />
+                    <Award className="h-5 w-5 text-green-600 flex-shrink-0" />
                     <h4 className="font-medium">Education {index + 1}</h4>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Button variant="ghost" size="sm">
+                    <Button variant="ghost" size="sm" className="p-1">
                       <GripVertical className="h-4 w-4" />
                     </Button>
                     <Button 
@@ -296,13 +297,14 @@ export function CVSectionEditor({ section, onUpdate }: CVSectionEditorProps) {
                         education.splice(index, 1);
                         onUpdate({ content: { ...section.content, education } });
                       }}
+                      className="p-1"
                     >
                       <Trash2 className="h-4 w-4 text-red-500" />
                     </Button>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <Input
                       label="Degree"
                       value={edu.degree || ''}
@@ -325,7 +327,7 @@ export function CVSectionEditor({ section, onUpdate }: CVSectionEditorProps) {
                     />
                   </div>
                   
-                  <div className="grid md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <Input
                       label="Institution"
                       value={edu.institution || ''}
@@ -349,7 +351,7 @@ export function CVSectionEditor({ section, onUpdate }: CVSectionEditorProps) {
                     />
                   </div>
 
-                  <div className="grid md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <Input
                       label="GPA (Optional)"
                       value={edu.gpa || ''}
@@ -402,9 +404,9 @@ export function CVSectionEditor({ section, onUpdate }: CVSectionEditorProps) {
             <div className="grid gap-6">
               {(section.content.skillCategories || []).map((category: any, categoryIndex: number) => (
                 <Card key={categoryIndex} className="border-l-4 border-l-purple-500">
-                  <CardHeader className="flex flex-row items-center justify-between pb-3">
-                    <div className="flex items-center space-x-2">
-                      <Star className="h-5 w-5 text-purple-600" />
+                  <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-3 space-y-2 sm:space-y-0">
+                    <div className="flex items-center space-x-2 flex-1">
+                      <Star className="h-5 w-5 text-purple-600 flex-shrink-0" />
                       <Input
                         value={category.name || ''}
                         onChange={(e) => {
@@ -424,6 +426,7 @@ export function CVSectionEditor({ section, onUpdate }: CVSectionEditorProps) {
                         skillCategories.splice(categoryIndex, 1);
                         onUpdate({ content: { ...section.content, skillCategories } });
                       }}
+                      className="p-1 flex-shrink-0"
                     >
                       <Trash2 className="h-4 w-4 text-red-500" />
                     </Button>
@@ -431,7 +434,7 @@ export function CVSectionEditor({ section, onUpdate }: CVSectionEditorProps) {
                   <CardContent>
                     <div className="space-y-3">
                       {(category.skills || []).map((skill: any, skillIndex: number) => (
-                        <div key={skillIndex} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                        <div key={skillIndex} className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 p-3 bg-gray-50 rounded-lg">
                           <Input
                             value={skill.name || ''}
                             onChange={(e) => {
@@ -444,8 +447,8 @@ export function CVSectionEditor({ section, onUpdate }: CVSectionEditorProps) {
                             placeholder="Skill name"
                             className="flex-1"
                           />
-                          <div className="flex items-center space-x-2 min-w-32">
-                            <span className="text-xs text-gray-600">Proficiency:</span>
+                          <div className="flex items-center space-x-2 w-full sm:w-auto sm:min-w-32">
+                            <span className="text-xs text-gray-600 flex-shrink-0">Proficiency:</span>
                             <input
                               type="range"
                               min="1"
@@ -460,7 +463,7 @@ export function CVSectionEditor({ section, onUpdate }: CVSectionEditorProps) {
                               }}
                               className="flex-1"
                             />
-                            <span className="text-xs font-medium w-8">
+                            <span className="text-xs font-medium w-12 text-center">
                               {['', 'Basic', 'Good', 'Strong', 'Expert', 'Master'][skill.level || 3]}
                             </span>
                           </div>
@@ -474,6 +477,7 @@ export function CVSectionEditor({ section, onUpdate }: CVSectionEditorProps) {
                               skillCategories[categoryIndex] = { ...category, skills };
                               onUpdate({ content: { ...section.content, skillCategories } });
                             }}
+                            className="p-1 flex-shrink-0"
                           >
                             <Trash2 className="h-4 w-4 text-red-500" />
                           </Button>
@@ -520,7 +524,7 @@ export function CVSectionEditor({ section, onUpdate }: CVSectionEditorProps) {
         return (
           <div className="text-center py-12">
             <div className="text-gray-400 mb-4">
-              <Sparkles className="h-12 w-12 mx-auto" />
+              <Sparkles className="h-8 w-8 sm:h-12 sm:w-12 mx-auto" />
             </div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">Section editor coming soon</h3>
             <p className="text-gray-600">
@@ -534,9 +538,9 @@ export function CVSectionEditor({ section, onUpdate }: CVSectionEditorProps) {
   return (
     <Card className="min-h-96">
       <CardHeader className="border-b border-gray-100">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
+            <div className="p-2 bg-blue-100 rounded-lg flex-shrink-0">
               {section.section_type === 'personal_info' && <User className="h-5 w-5 text-blue-600" />}
               {section.section_type === 'summary' && <Award className="h-5 w-5 text-blue-600" />}
               {section.section_type === 'experience' && <Building className="h-5 w-5 text-blue-600" />}
@@ -545,9 +549,9 @@ export function CVSectionEditor({ section, onUpdate }: CVSectionEditorProps) {
               {!['personal_info', 'summary', 'experience', 'education', 'skills'].includes(section.section_type) && 
                 <Sparkles className="h-5 w-5 text-blue-600" />}
             </div>
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900">{section.title}</h2>
-              <p className="text-sm text-gray-600">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 truncate">{section.title}</h2>
+              <p className="text-sm text-gray-600 mt-1">
                 {section.section_type === 'personal_info' && 'Your contact information and professional identity'}
                 {section.section_type === 'summary' && 'A compelling overview of your professional background'}
                 {section.section_type === 'experience' && 'Your work history and professional achievements'}
@@ -557,7 +561,7 @@ export function CVSectionEditor({ section, onUpdate }: CVSectionEditorProps) {
             </div>
           </div>
           
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3 flex-shrink-0">
             {section.ai_optimized && (
               <span className="inline-flex items-center px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">
                 <Sparkles className="h-3 w-3 mr-1" />
@@ -578,7 +582,7 @@ export function CVSectionEditor({ section, onUpdate }: CVSectionEditorProps) {
         </div>
       </CardHeader>
       
-      <CardContent className="p-6">
+      <CardContent className="p-4 sm:p-6">
         {renderSectionContent()}
       </CardContent>
     </Card>

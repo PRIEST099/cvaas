@@ -13,7 +13,9 @@ import {
   Award,
   Building,
   Star,
-  FileText
+  FileText,
+  Menu,
+  X
 } from 'lucide-react';
 import { cvService } from '../../services/cvService';
 import { Button } from '../ui/Button';
@@ -33,6 +35,7 @@ export function CVBuilder() {
   const [showPreview, setShowPreview] = useState(false);
   const [showEphemeralLinks, setShowEphemeralLinks] = useState(false);
   const [cvTitle, setCvTitle] = useState('');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
     if (cvId) {
@@ -169,14 +172,25 @@ export function CVBuilder() {
       <div className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-4 flex-1 min-w-0">
+              {/* Mobile sidebar toggle */}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="lg:hidden p-2"
+                onClick={() => setIsSidebarOpen(true)}
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+              
               <Input
                 value={cvTitle}
                 onChange={(e) => setCvTitle(e.target.value)}
-                className="text-xl font-semibold border-none bg-transparent px-0 focus:ring-0 focus:border-none"
+                className="text-lg sm:text-xl font-semibold border-none bg-transparent px-0 focus:ring-0 focus:border-none min-w-0 flex-1"
                 placeholder="CV Title"
               />
-              <div className="flex items-center space-x-2">
+              
+              <div className="hidden sm:flex items-center space-x-2 flex-shrink-0">
                 <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                   cv.status === 'published' ? 'bg-green-100 text-green-800' :
                   cv.status === 'optimizing' ? 'bg-yellow-100 text-yellow-800' :
@@ -185,8 +199,8 @@ export function CVBuilder() {
                   {cv.status}
                 </span>
                 <div className="flex items-center space-x-1 text-xs text-gray-500">
-                  <span>Progress:</span>
-                  <div className="w-16 bg-gray-200 rounded-full h-2">
+                  <span className="hidden md:inline">Progress:</span>
+                  <div className="w-12 sm:w-16 bg-gray-200 rounded-full h-2">
                     <div 
                       className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
                       style={{ width: `${overallProgress}%` }}
@@ -197,23 +211,25 @@ export function CVBuilder() {
               </div>
             </div>
             
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowEphemeralLinks(true)}
+                className="hidden sm:flex"
               >
                 <LinkIcon className="h-4 w-4 mr-1" />
-                Share Links
+                <span className="hidden md:inline">Share</span>
               </Button>
               
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => navigate(`/cvs/${cv.id}/widget`)}
+                className="hidden sm:flex"
               >
                 <Code className="h-4 w-4 mr-1" />
-                Widget
+                <span className="hidden md:inline">Widget</span>
               </Button>
               
               <Button
@@ -221,8 +237,8 @@ export function CVBuilder() {
                 size="sm"
                 onClick={() => setShowPreview(true)}
               >
-                <Eye className="h-4 w-4 mr-1" />
-                Preview
+                <Eye className="h-4 w-4 sm:mr-1" />
+                <span className="hidden sm:inline">Preview</span>
               </Button>
               
               <Button
@@ -232,21 +248,21 @@ export function CVBuilder() {
                 className="relative"
               >
                 {isSaving ? (
-                  <RefreshCw className="h-4 w-4 mr-1 animate-spin" />
+                  <RefreshCw className="h-4 w-4 sm:mr-1 animate-spin" />
                 ) : (
-                  <Save className="h-4 w-4 mr-1" />
+                  <Save className="h-4 w-4 sm:mr-1" />
                 )}
-                {isSaving ? 'Saving...' : 'Save'}
+                <span className="hidden sm:inline">{isSaving ? 'Saving...' : 'Save'}</span>
               </Button>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid lg:grid-cols-4 gap-8">
-          {/* Sidebar - Section Navigation */}
-          <div className="lg:col-span-1">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+        <div className="grid lg:grid-cols-4 gap-4 sm:gap-8">
+          {/* Desktop Sidebar */}
+          <div className="hidden lg:block lg:col-span-1">
             <Card className="sticky top-24">
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -272,7 +288,7 @@ export function CVBuilder() {
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center space-x-2">
                           {getSectionIcon(section.section_type)}
-                          <span className="font-medium">{section.title}</span>
+                          <span className="font-medium text-sm">{section.title}</span>
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
@@ -293,6 +309,59 @@ export function CVBuilder() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Mobile Sidebar */}
+          {isSidebarOpen && (
+            <div className="fixed inset-0 z-50 lg:hidden">
+              <div className="fixed inset-0 bg-black bg-opacity-50" onClick={() => setIsSidebarOpen(false)} />
+              <div className="fixed left-0 top-0 bottom-0 w-80 max-w-[80vw] bg-white shadow-xl">
+                <div className="flex items-center justify-between p-4 border-b">
+                  <h3 className="font-semibold">CV Sections</h3>
+                  <Button variant="ghost" size="sm" onClick={() => setIsSidebarOpen(false)}>
+                    <X className="h-5 w-5" />
+                  </Button>
+                </div>
+                <div className="p-4 space-y-2 overflow-y-auto">
+                  {cv.sections && cv.sections.map((section: any) => {
+                    const progress = getSectionProgress(section);
+                    return (
+                      <button
+                        key={section.id}
+                        className={`w-full text-left px-3 py-3 rounded-lg transition-all duration-200 ${
+                          activeSection === section.id
+                            ? 'bg-blue-100 text-blue-700 shadow-sm'
+                            : 'hover:bg-gray-100'
+                        }`}
+                        onClick={() => {
+                          setActiveSection(section.id);
+                          setIsSidebarOpen(false);
+                        }}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center space-x-2">
+                            {getSectionIcon(section.section_type)}
+                            <span className="font-medium">{section.title}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <div className="flex-1 bg-gray-200 rounded-full h-1.5">
+                            <div 
+                              className={`h-1.5 rounded-full transition-all duration-300 ${
+                                progress === 100 ? 'bg-green-500' : 
+                                progress > 0 ? 'bg-blue-500' : 'bg-gray-300'
+                              }`}
+                              style={{ width: `${progress}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-xs text-gray-500">{progress}%</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Main Content - Section Editor */}
           <div className="lg:col-span-3">
@@ -315,13 +384,13 @@ export function CVBuilder() {
       {showEphemeralLinks && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-xl font-semibold">Secure Sharing</h2>
+            <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200">
+              <h2 className="text-lg sm:text-xl font-semibold">Secure Sharing</h2>
               <Button variant="ghost" size="sm" onClick={() => setShowEphemeralLinks(false)}>
-                ×
+                <X className="h-5 w-5" />
               </Button>
             </div>
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+            <div className="p-4 sm:p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
               <EphemeralLinksManager cvId={cv.id} />
             </div>
           </div>
