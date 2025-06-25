@@ -86,6 +86,16 @@ class CVService {
           user_id: user.id,
           title: cvData.title || 'Untitled CV',
           template_id: cvData.template_id || 'modern-1',
+          metadata: {
+            totalViews: 0,
+            uniqueViews: 0,
+            downloadCount: 0,
+            shareCount: 0,
+            recruiterViews: 0,
+            topReferrers: [],
+            keywordMatches: [],
+            ...cvData.metadata
+          },
           ...cvData
         })
         .select()
@@ -170,15 +180,34 @@ class CVService {
     }
   }
 
-  // NEW: Increment recruiter view count
+  // Increment recruiter view count
   async incrementCVRecruiterView(cvId: string): Promise<boolean> {
     try {
-      const { data, error } = await supabase.rpc('increment_cv_recruiter_view', {
-        cv_id: cvId
-      });
+      // Get current CV metadata
+      const { data: cv, error: fetchError } = await supabase
+        .from('cvs')
+        .select('metadata')
+        .eq('id', cvId)
+        .single();
 
-      if (error) throw error;
-      return data || false;
+      if (fetchError) throw fetchError;
+
+      const currentMetadata = cv.metadata || {};
+      const currentRecruiterViews = currentMetadata.recruiterViews || 0;
+
+      // Update recruiter views
+      const { error: updateError } = await supabase
+        .from('cvs')
+        .update({
+          metadata: {
+            ...currentMetadata,
+            recruiterViews: currentRecruiterViews + 1
+          }
+        })
+        .eq('id', cvId);
+
+      if (updateError) throw updateError;
+      return true;
     } catch (error) {
       console.error('Failed to increment recruiter view:', error);
       return false;

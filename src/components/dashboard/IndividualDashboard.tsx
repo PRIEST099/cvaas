@@ -182,7 +182,11 @@ export function IndividualDashboard() {
           </CardHeader>
           <CardContent className="space-y-4">
             {submissions.slice(0, 3).map((submission) => (
-              <div key={submission.id} className="p-4 border border-gray-200 rounded-lg">
+              <Link 
+                key={submission.id} 
+                to={`/my-submissions/${submission.id}`}
+                className="block p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <h3 className="font-medium text-gray-900">
@@ -216,7 +220,7 @@ export function IndividualDashboard() {
                     </span>
                   </div>
                 </div>
-              </div>
+              </Link>
             ))}
             {submissions.length === 0 && (
               <div className="text-center py-8">

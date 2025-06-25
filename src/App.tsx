@@ -22,6 +22,7 @@ import { RecruiterQuestsPage } from './pages/RecruiterQuestsPage';
 import { QuestSubmissionReviewPage } from './pages/QuestSubmissionReviewPage';
 import { QuestSubmissionsListPage } from './pages/QuestSubmissionsListPage';
 import { QuestSubmissionPage } from './pages/QuestSubmissionPage';
+import { QuestSubmissionDetailsPage } from './pages/QuestSubmissionDetailsPage';
 import { MyBadgesPage } from './pages/MyBadgesPage';
 import { LeaderboardPage } from './pages/LeaderboardPage';
 import { RecruiterCVViewPage } from './pages/RecruiterCVViewPage';
@@ -147,6 +148,16 @@ function AppRoutes() {
           element={
             <ProtectedRoute requiredRole="candidate">
               <QuestSubmissionPage />
+            </ProtectedRoute>
+          }
+        />
+        
+        {/* Quest Submission Details Route (Candidates) */}
+        <Route
+          path="/my-submissions/:submissionId"
+          element={
+            <ProtectedRoute requiredRole="candidate">
+              <QuestSubmissionDetailsPage />
             </ProtectedRoute>
           }
         />
