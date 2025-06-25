@@ -1,18 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, FileText, Trophy, Eye, Share2, TrendingUp } from 'lucide-react';
+import { Plus, FileText, Trophy, Eye, Share2, TrendingUp, Code, X } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { cvService } from '../../services/cvService';
 import { questService } from '../../services/questService';
 import { Button } from '../ui/Button';
 import { Card, CardContent, CardHeader } from '../ui/Card';
+import { EphemeralLinksManager } from '../privacy/EphemeralLinksManager';
+import { useNavigate } from 'react-router-dom';
 
 export function IndividualDashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [cvs, setCVs] = useState([]);
   const [submissions, setSubmissions] = useState([]);
   const [badges, setBadges] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showEphemeralLinks, setShowEphemeralLinks] = useState(false);
+  const [selectedCvForLinks, setSelectedCvForLinks] = useState<any>(null);
 
   useEffect(() => {
     if (user) {
@@ -37,6 +42,15 @@ export function IndividualDashboard() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleShareCV = (cv: any) => {
+    setSelectedCvForLinks(cv);
+    setShowEphemeralLinks(true);
+  };
+
+  const handleWidgetCV = (cv: any) => {
+    navigate(`/cvs/${cv.id}/widget`);
   };
 
   if (isLoading) {
@@ -146,8 +160,21 @@ export function IndividualDashboard() {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Button variant="ghost" size="sm">
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => handleShareCV(cv)}
+                      title="Share CV"
+                    >
                       <Share2 className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => handleWidgetCV(cv)}
+                      title="CV Widget"
+                    >
+                      <Code className="h-4 w-4" />
                     </Button>
                     <Button variant="outline" size="sm">
                       <Link to={`/cvs/${cv.id}/edit`}>Edit</Link>
@@ -216,7 +243,7 @@ export function IndividualDashboard() {
                       submission.status === 'under_review' ? 'bg-yellow-100 text-yellow-800' :
                       'bg-blue-100 text-blue-800'
                     }`}>
-                      {submission.status.replace('_', ' ').charAt(0).toUpperCase() + submission.status.slice(1)}
+                      {submission.status.replace('_', ' ').charAt(0).toUpperCase() + submission.status.slice(1).replace('_', ' ')}
                     </span>
                   </div>
                 </div>
@@ -235,6 +262,23 @@ export function IndividualDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Ephemeral Links Modal */}
+      {showEphemeralLinks && selectedCvForLinks && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold">Share {selectedCvForLinks.title}</h2>
+              <Button variant="ghost" size="sm" onClick={() => setShowEphemeralLinks(false)}>
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+              <EphemeralLinksManager cvId={selectedCvForLinks.id} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
