@@ -1,5 +1,5 @@
 // Core application types
-export interface User {
+interface User {
   id: string;
   email: string;
   role: 'candidate' | 'recruiter';
@@ -13,7 +13,7 @@ export interface User {
   updated_at: string;
 }
 
-export interface CV {
+interface CV {
   id: string;
   user_id: string;
   title: string;
@@ -28,7 +28,7 @@ export interface CV {
   updated_at: string;
 }
 
-export interface CVSection {
+interface CVSection {
   id: string;
   cv_id: string;
   section_type: string;
@@ -41,7 +41,7 @@ export interface CVSection {
   updated_at: string;
 }
 
-export interface Quest {
+interface Quest {
   id: string;
   created_by: string;
   title: string;
@@ -62,7 +62,7 @@ export interface Quest {
   updated_at: string;
 }
 
-export interface QuestSubmission {
+interface QuestSubmission {
   id: string;
   quest_id: string;
   user_id: string;
@@ -82,7 +82,7 @@ export interface QuestSubmission {
   };
 }
 
-export interface Badge {
+interface Badge {
   id: string;
   user_id: string;
   quest_id: string | null;
@@ -137,7 +137,7 @@ export interface WidgetConfig {
 }
 
 // RevenueCat Integration Types
-export interface RevenueCatCustomerInfo {
+interface RevenueCatCustomerInfo {
   originalAppUserId: string;
   entitlements: {
     [key: string]: {
@@ -164,9 +164,53 @@ export interface CustomSlugSuggestion {
   available: boolean;
 }
 
-export interface PremiumLinkFeatures {
+interface PremiumLinkFeatures {
   customSlugs: boolean;
   unlimitedLinks: boolean;
   advancedAnalytics: boolean;
   prioritySupport: boolean;
+}
+
+// Candidate Invitation Types
+export interface CandidateInvitation {
+  id: string;
+  candidateId: string;
+  recruiterId: string;
+  questId?: string;
+  cvId: string;
+  message: string;
+  status: 'pending' | 'accepted' | 'declined';
+  createdAt: string;
+  expiresAt: string;
+  responseAt?: string;
+  responseMessage?: string;
+}
+
+export interface InvitationStats {
+  total: number;
+  pending: number;
+  accepted: number;
+  declined: number;
+  responseRate: number;
+}
+
+// Feedback Types
+export interface FeedbackItem {
+  id: string;
+  content: string;
+  type: 'strength' | 'improvement' | 'specific';
+  category?: string;
+  relatedSkill?: string;
+  severity?: 'minor' | 'moderate' | 'major';
+  impact?: 'low' | 'medium' | 'high';
+}
+
+export interface StructuredFeedback {
+  overall: string;
+  strengths: FeedbackItem[];
+  improvements: FeedbackItem[];
+  specificComments: FeedbackItem[];
+  score: number;
+  recommendation: 'hire' | 'consider' | 'pass';
+  privateNotes?: string;
 }

@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, FileText, Trophy, Eye, Share2, TrendingUp, Code, X } from 'lucide-react';
+import { Plus, FileText, Trophy, Eye, Share2, TrendingUp, Code, X, Bell, Mail, Calendar, Clock } from 'lucide-react';
+
 import { useAuth } from '../../contexts/AuthContext';
 import { cvService } from '../../services/cvService';
 import { questService } from '../../services/questService';
+import { talentService } from '../../services/talentService';
 import { Button } from '../ui/Button';
 import { Card, CardContent, CardHeader } from '../ui/Card';
 import { EphemeralLinksManager } from '../privacy/EphemeralLinksManager';
@@ -15,6 +17,7 @@ export function IndividualDashboard() {
   const [cvs, setCVs] = useState([]);
   const [submissions, setSubmissions] = useState([]);
   const [badges, setBadges] = useState([]);
+  const [invitations, setInvitations] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showEphemeralLinks, setShowEphemeralLinks] = useState(false);
   const [selectedCvForLinks, setSelectedCvForLinks] = useState<any>(null);
@@ -28,15 +31,17 @@ export function IndividualDashboard() {
   const loadDashboardData = async () => {
     try {
       setIsLoading(true);
-      const [cvsData, submissionsData, badgesData] = await Promise.all([
+      const [cvsData, submissionsData, badgesData, invitationsData] = await Promise.all([
         cvService.getCVs(),
         questService.getSubmissions(),
-        questService.getUserBadges()
+        questService.getUserBadges(),
+        talentService.getInvitations({ status: 'pending' })
       ]);
       
       setCVs(cvsData);
       setSubmissions(submissionsData);
       setBadges(badgesData);
+      setInvitations(invitationsData);
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
     } finally {
@@ -51,6 +56,17 @@ export function IndividualDashboard() {
 
   const handleWidgetCV = (cv: any) => {
     navigate(`/cvs/${cv.id}/widget`);
+  };
+
+  const handleRespondToInvitation = async (invitationId: string, status: 'accepted' | 'declined', message?: string) => {
+    try {
+      await talentService.respondToInvitation(invitationId, { status, message });
+      // Refresh invitations
+      const updatedInvitations = await talentService.getInvitations({ status: 'pending' });
+      setInvitations(updatedInvitations);
+    } catch (error) {
+      console.error('Failed to respond to invitation:', error);
+    }
   };
 
   if (isLoading) {
@@ -86,6 +102,65 @@ export function IndividualDashboard() {
           Ready to showcase your skills and discover new opportunities?
         </p>
       </div>
+
+      {/* Pending Invitations */}
+      {invitations.length > 0 && (
+        <Card className="border-2 border-blue-200 bg-blue-50">
+          <CardHeader>
+            <h3 className="font-semibold flex items-center">
+              <Bell className="h-5 w-5 mr-2 text-blue-600" />
+              Pending Invitations ({invitations.length})
+            </h3>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {invitations.slice(0, 3).map((invitation: any) => (
+              <div key={invitation.id} className="bg-white p-4 rounded-lg border border-blue-100 shadow-sm">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <Mail className="h-4 w-4 text-blue-600" />
+                      <h4 className="font-medium text-gray-900">
+                        Invitation from {invitation.recruiters?.company_name || 'a recruiter'}
+                      </h4>
+                    </div>
+                    <p className="text-sm text-gray-600 mt-2 mb-3">{invitation.message}</p>
+                    <div className="flex items-center text-xs text-gray-500 space-x-3">
+                      <span className="flex items-center">
+                        <Calendar className="h-3 w-3 mr-1" />
+                        Received {new Date(invitation.createdAt).toLocaleDateString()}
+                      </span>
+                      <span className="flex items-center">
+                        <Clock className="h-3 w-3 mr-1" />
+                        Expires {new Date(invitation.expiresAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col space-y-2">
+                    <Button 
+                      size="sm" 
+                      onClick={() => handleRespondToInvitation(invitation.id, 'accepted')}
+                    >
+                      Accept
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => handleRespondToInvitation(invitation.id, 'declined')}
+                    >
+                      Decline
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {invitations.length > 3 && (
+              <Button variant="outline" className="w-full">
+                View All Invitations
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Quick Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6">

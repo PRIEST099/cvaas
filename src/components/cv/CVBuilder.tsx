@@ -15,7 +15,8 @@ import {
   Star,
   FileText,
   Menu,
-  X
+  X,
+  Sparkles
 } from 'lucide-react';
 import { cvService } from '../../services/cvService';
 import { Button } from '../ui/Button';
@@ -24,6 +25,7 @@ import { Card, CardContent, CardHeader } from '../ui/Card';
 import { CVSectionEditor } from './CVSectionEditor';
 import { CVPreview } from './CVPreview';
 import { EphemeralLinksManager } from '../privacy/EphemeralLinksManager';
+import { CVOptimizerModal } from './CVOptimizerModal';
 
 export function CVBuilder() {
   const { cvId } = useParams<{ cvId: string }>();
@@ -36,6 +38,8 @@ export function CVBuilder() {
   const [showEphemeralLinks, setShowEphemeralLinks] = useState(false);
   const [cvTitle, setCvTitle] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isOptimizing, setIsOptimizing] = useState(false);
+  const [showOptimizerModal, setShowOptimizerModal] = useState(false);
 
   useEffect(() => {
     if (cvId) {
@@ -102,6 +106,64 @@ export function CVBuilder() {
     }));
   };
 
+  const handleOptimizeCV = async () => {
+    setShowOptimizerModal(true);
+  };
+
+  const handleApplyOptimization = async (optimizedSections: Record<string, any>) => {
+    if (!cv) return;
+    
+    try {
+      setIsOptimizing(true);
+      
+      // Update CV status to optimizing
+      await cvService.updateCV(cv.id, {
+        status: 'optimizing'
+      });
+      
+      // Update local state
+      setCV(prev => ({
+        ...prev,
+        status: 'optimizing'
+      }));
+      
+      // Apply optimized content to each section
+      for (const sectionType in optimizedSections) {
+        const section = cv.sections.find((s: any) => s.section_type === sectionType);
+        if (section) {
+          // Update the section in the database
+          await cvService.updateCVSection(section.id, {
+            content: optimizedSections[sectionType],
+            ai_optimized: true
+          });
+          
+          // Update the section in local state
+          handleSectionUpdate(section.id, {
+            content: optimizedSections[sectionType],
+            ai_optimized: true
+          });
+        }
+      }
+      
+      // Update CV status back to previous state
+      await cvService.updateCV(cv.id, {
+        status: cv.status === 'optimizing' ? 'draft' : cv.status
+      });
+      
+      // Update local state
+      setCV(prev => ({
+        ...prev,
+        status: prev.status === 'optimizing' ? 'draft' : prev.status
+      }));
+      
+      setShowOptimizerModal(false);
+    } catch (error) {
+      console.error('Failed to apply optimization:', error);
+    } finally {
+      setIsOptimizing(false);
+    }
+  };
+
   const getSectionIcon = (sectionType: string) => {
     switch (sectionType) {
       case 'personal_info': return <User className="h-4 w-4" />;
@@ -109,6 +171,7 @@ export function CVBuilder() {
       case 'experience': return <Building className="h-4 w-4" />;
       case 'education': return <Award className="h-4 w-4" />;
       case 'skills': return <Star className="h-4 w-4" />;
+      case 'projects': return <Star className="h-4 w-4" />;
       default: return <FileText className="h-4 w-4" />;
     }
   };
@@ -134,8 +197,36 @@ export function CVBuilder() {
       case 'skills':
         return (section.content.skillCategories?.length || 0) > 0 ? 100 : 0;
       
+      case 'projects':
+        return (section.content.projects?.length || 0) > 0 ? 100 : 0;
+      
       default:
         return 0;
+    }
+  };
+
+  // Navigation functions for sections
+  const navigateToSection = (sectionId: string) => {
+    setActiveSection(sectionId);
+    setIsSidebarOpen(false); // Close mobile sidebar when navigating
+  };
+
+  const getCurrentSectionIndex = () => {
+    if (!cv?.sections) return -1;
+    return cv.sections.findIndex((section: any) => section.id === activeSection);
+  };
+
+  const navigateToNextSection = () => {
+    const currentIndex = getCurrentSectionIndex();
+    if (currentIndex >= 0 && currentIndex < cv.sections.length - 1) {
+      navigateToSection(cv.sections[currentIndex + 1].id);
+    }
+  };
+
+  const navigateToPreviousSection = () => {
+    const currentIndex = getCurrentSectionIndex();
+    if (currentIndex > 0) {
+      navigateToSection(cv.sections[currentIndex - 1].id);
     }
   };
 
@@ -212,6 +303,24 @@ export function CVBuilder() {
             </div>
             
             <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
+              {/* AI Optimize Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleOptimizeCV}
+                disabled={isOptimizing}
+                className="hidden sm:flex bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200 hover:bg-blue-100"
+              >
+                {isOptimizing ? (
+                  <RefreshCw className="h-4 w-4 mr-1 animate-spin text-blue-600" />
+                ) : (
+                  <Sparkles className="h-4 w-4 mr-1 text-blue-600" />
+                )}
+                <span className="text-blue-700">
+                  {isOptimizing ? 'Optimizing...' : 'AI Optimize'}
+                </span>
+              </Button>
+
               <Button
                 variant="ghost"
                 size="sm"
@@ -283,13 +392,16 @@ export function CVBuilder() {
                           ? 'bg-blue-100 text-blue-700 shadow-sm'
                           : 'hover:bg-gray-100'
                       }`}
-                      onClick={() => setActiveSection(section.id)}
+                      onClick={() => navigateToSection(section.id)}
                     >
-                      <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-start justify-between mb-2">
                         <div className="flex items-center space-x-2">
                           {getSectionIcon(section.section_type)}
                           <span className="font-medium text-sm">{section.title}</span>
                         </div>
+                        {section.ai_optimized && (
+                          <Sparkles className="h-3 w-3 text-yellow-500" />
+                        )}
                       </div>
                       <div className="flex items-center space-x-2">
                         <div className="flex-1 bg-gray-200 rounded-full h-1.5">
@@ -332,16 +444,16 @@ export function CVBuilder() {
                             ? 'bg-blue-100 text-blue-700 shadow-sm'
                             : 'hover:bg-gray-100'
                         }`}
-                        onClick={() => {
-                          setActiveSection(section.id);
-                          setIsSidebarOpen(false);
-                        }}
+                        onClick={() => navigateToSection(section.id)}
                       >
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center space-x-2">
                             {getSectionIcon(section.section_type)}
                             <span className="font-medium">{section.title}</span>
                           </div>
+                          {section.ai_optimized && (
+                            <Sparkles className="h-3 w-3 text-yellow-500" />
+                          )}
                         </div>
                         <div className="flex items-center space-x-2">
                           <div className="flex-1 bg-gray-200 rounded-full h-1.5">
@@ -367,7 +479,12 @@ export function CVBuilder() {
           <div className="lg:col-span-3">
             <CVSectionEditor
               section={activeSection_data}
+              sections={cv.sections}
+              currentSectionIndex={getCurrentSectionIndex()}
               onUpdate={(updates) => handleSectionUpdate(activeSection, updates)}
+              onNavigateToSection={navigateToSection}
+              onNavigateNext={navigateToNextSection}
+              onNavigatePrevious={navigateToPreviousSection}
             />
           </div>
         </div>
@@ -395,6 +512,16 @@ export function CVBuilder() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* CV Optimizer Modal */}
+      {showOptimizerModal && (
+        <CVOptimizerModal
+          cv={cv}
+          onClose={() => setShowOptimizerModal(false)}
+          onApply={handleApplyOptimization}
+          isOptimizing={isOptimizing}
+        />
       )}
     </div>
   );

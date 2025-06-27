@@ -1,15 +1,86 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Card, CardContent, CardHeader } from '../ui/Card';
-import { Plus, Trash2, GripVertical, Sparkles, Star, Award, Calendar, MapPin, Building, User, Mail, Phone, Globe, Linkedin } from 'lucide-react';
+import { cvService } from '../../services/cvService';
+import { 
+  Plus, 
+  Trash2, 
+  GripVertical, 
+  Sparkles, 
+  Star, 
+  Award, 
+  Calendar, 
+  MapPin, 
+  Building, 
+  User, 
+  Mail, 
+  Phone, 
+  Globe, 
+  Linkedin, 
+  RefreshCw, 
+  CheckCircle, 
+  AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
+  ArrowLeft,
+  ArrowRight
+} from 'lucide-react';
 
 interface CVSectionEditorProps {
   section: any;
+  sections: any[];
+  currentSectionIndex: number;
   onUpdate: (updates: any) => void;
+  onNavigateToSection: (sectionId: string) => void;
+  onNavigateNext: () => void;
+  onNavigatePrevious: () => void;
 }
 
-export function CVSectionEditor({ section, onUpdate }: CVSectionEditorProps) {
+export function CVSectionEditor({ 
+  section, 
+  sections, 
+  currentSectionIndex, 
+  onUpdate, 
+  onNavigateToSection, 
+  onNavigateNext, 
+  onNavigatePrevious 
+}: CVSectionEditorProps) {
+  const [isRollingBack, setIsRollingBack] = useState(false);
+  const [optimizationError, setOptimizationError] = useState('');
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Only handle keyboard shortcuts when not typing in an input/textarea
+      if (
+        event.target instanceof HTMLInputElement ||
+        event.target instanceof HTMLTextAreaElement ||
+        event.target instanceof HTMLSelectElement
+      ) {
+        // Allow Tab navigation within forms
+        if (event.key === 'Tab') {
+          return; // Let default tab behavior work
+        }
+        return;
+      }
+
+      // Ctrl/Cmd + Arrow keys for section navigation
+      if ((event.ctrlKey || event.metaKey)) {
+        if (event.key === 'ArrowLeft' && currentSectionIndex > 0) {
+          event.preventDefault();
+          onNavigatePrevious();
+        } else if (event.key === 'ArrowRight' && currentSectionIndex < sections.length - 1) {
+          event.preventDefault();
+          onNavigateNext();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [currentSectionIndex, sections.length, onNavigateNext, onNavigatePrevious]);
+
   if (!section) {
     return (
       <Card>
@@ -23,6 +94,27 @@ export function CVSectionEditor({ section, onUpdate }: CVSectionEditorProps) {
       </Card>
     );
   }
+
+  const handleRollbackSection = async () => {
+    try {
+      setIsRollingBack(true);
+      setOptimizationError('');
+      
+      // Call the rollback service
+      const rolledBackSection = await cvService.rollbackCVSection(section.id);
+      
+      // Update the local state with rolled back content
+      onUpdate({
+        content: rolledBackSection.content,
+        ai_optimized: false,
+        original_content: null
+      });
+    } catch (error: any) {
+      setOptimizationError(error.message || 'Failed to rollback section');
+    } finally {
+      setIsRollingBack(false);
+    }
+  };
 
   const renderSectionContent = () => {
     switch (section.section_type) {
@@ -520,6 +612,108 @@ export function CVSectionEditor({ section, onUpdate }: CVSectionEditorProps) {
           </div>
         );
 
+      case 'projects':
+        return (
+          <div className="space-y-6">
+            {(section.content.projects || []).map((project: any, index: number) => (
+              <Card key={index} className="border-l-4 border-l-indigo-500">
+                <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-3 space-y-2 sm:space-y-0">
+                  <div className="flex items-center space-x-2">
+                    <Star className="h-5 w-5 text-indigo-600 flex-shrink-0" />
+                    <h4 className="font-medium">Project {index + 1}</h4>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button variant="ghost" size="sm" className="p-1">
+                      <GripVertical className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => {
+                        const projects = [...(section.content.projects || [])];
+                        projects.splice(index, 1);
+                        onUpdate({ content: { ...section.content, projects } });
+                      }}
+                      className="p-1"
+                    >
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Input
+                    label="Project Title"
+                    value={project.title || ''}
+                    onChange={(e) => {
+                      const projects = [...(section.content.projects || [])];
+                      projects[index] = { ...project, title: e.target.value };
+                      onUpdate({ content: { ...section.content, projects } });
+                    }}
+                    placeholder="E-commerce Platform"
+                  />
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Description
+                    </label>
+                    <textarea
+                      value={project.description || ''}
+                      onChange={(e) => {
+                        const projects = [...(section.content.projects || [])];
+                        projects[index] = { ...project, description: e.target.value };
+                        onUpdate({ content: { ...section.content, projects } });
+                      }}
+                      placeholder="Describe the project, your role, and key achievements..."
+                      className="w-full h-24 p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <Input
+                      label="Technologies Used"
+                      value={project.technologies ? project.technologies.join(', ') : ''}
+                      onChange={(e) => {
+                        const technologies = e.target.value.split(',').map(t => t.trim()).filter(Boolean);
+                        const projects = [...(section.content.projects || [])];
+                        projects[index] = { ...project, technologies };
+                        onUpdate({ content: { ...section.content, projects } });
+                      }}
+                      placeholder="React, Node.js, MongoDB"
+                    />
+                    <Input
+                      label="Project URL"
+                      value={project.projectUrl || ''}
+                      onChange={(e) => {
+                        const projects = [...(section.content.projects || [])];
+                        projects[index] = { ...project, projectUrl: e.target.value };
+                        onUpdate({ content: { ...section.content, projects } });
+                      }}
+                      placeholder="https://example.com"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+            
+            <Button
+              variant="outline"
+              onClick={() => {
+                const projects = [...(section.content.projects || []), {
+                  title: '',
+                  description: '',
+                  technologies: [],
+                  projectUrl: ''
+                }];
+                onUpdate({ content: { ...section.content, projects } });
+              }}
+              className="w-full border-dashed border-2 border-gray-300 hover:border-indigo-400 hover:bg-indigo-50"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Project
+            </Button>
+          </div>
+        );
+
       default:
         return (
           <div className="text-center py-12">
@@ -535,6 +729,10 @@ export function CVSectionEditor({ section, onUpdate }: CVSectionEditorProps) {
     }
   };
 
+  // Determine if we can navigate to previous/next sections
+  const hasPreviousSection = currentSectionIndex > 0;
+  const hasNextSection = currentSectionIndex < sections.length - 1;
+
   return (
     <Card className="min-h-96">
       <CardHeader className="border-b border-gray-100">
@@ -546,7 +744,8 @@ export function CVSectionEditor({ section, onUpdate }: CVSectionEditorProps) {
               {section.section_type === 'experience' && <Building className="h-5 w-5 text-blue-600" />}
               {section.section_type === 'education' && <Award className="h-5 w-5 text-blue-600" />}
               {section.section_type === 'skills' && <Star className="h-5 w-5 text-blue-600" />}
-              {!['personal_info', 'summary', 'experience', 'education', 'skills'].includes(section.section_type) && 
+              {section.section_type === 'projects' && <Star className="h-5 w-5 text-blue-600" />}
+              {!['personal_info', 'summary', 'experience', 'education', 'skills', 'projects'].includes(section.section_type) && 
                 <Sparkles className="h-5 w-5 text-blue-600" />}
             </div>
             <div className="min-w-0 flex-1">
@@ -557,6 +756,7 @@ export function CVSectionEditor({ section, onUpdate }: CVSectionEditorProps) {
                 {section.section_type === 'experience' && 'Your work history and professional achievements'}
                 {section.section_type === 'education' && 'Your academic background and qualifications'}
                 {section.section_type === 'skills' && 'Your technical and professional competencies'}
+                {section.section_type === 'projects' && 'Your portfolio of projects and accomplishments'}
               </p>
             </div>
           </div>
@@ -567,6 +767,20 @@ export function CVSectionEditor({ section, onUpdate }: CVSectionEditorProps) {
                 <Sparkles className="h-3 w-3 mr-1" />
                 AI Optimized
               </span>
+            )}
+            
+            {/* Rollback Button - Renamed to "Back to original" */}
+            {section.ai_optimized && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleRollbackSection}
+                isLoading={isRollingBack}
+                className="text-gray-700"
+              >
+                <RefreshCw className="h-4 w-4 mr-1" />
+                Back to original
+              </Button>
             )}
             
             <label className="flex items-center">
@@ -580,10 +794,72 @@ export function CVSectionEditor({ section, onUpdate }: CVSectionEditorProps) {
             </label>
           </div>
         </div>
+        
+        {/* Optimization Error */}
+        {optimizationError && (
+          <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-center text-red-700 text-sm">
+              <AlertCircle className="h-4 w-4 mr-2" />
+              {optimizationError}
+            </div>
+          </div>
+        )}
       </CardHeader>
       
       <CardContent className="p-4 sm:p-6">
         {renderSectionContent()}
+
+        {/* Section Navigation */}
+        <div className="flex items-center justify-between mt-8 pt-4 border-t border-gray-200">
+          <Button
+            variant="outline"
+            onClick={onNavigatePrevious}
+            disabled={!hasPreviousSection}
+            className={!hasPreviousSection ? 'opacity-50 cursor-not-allowed' : ''}
+          >
+            <ChevronLeft className="h-4 w-4 mr-2" />
+            Previous Section
+          </Button>
+
+          <div className="hidden sm:flex items-center space-x-2">
+            {sections.map((s, index) => (
+              <button
+                key={s.id}
+                onClick={() => onNavigateToSection(s.id)}
+                className={`w-2.5 h-2.5 rounded-full transition-colors ${
+                  currentSectionIndex === index 
+                    ? 'bg-blue-600' 
+                    : 'bg-gray-300 hover:bg-gray-400'
+                }`}
+                aria-label={`Go to ${s.title}`}
+              />
+            ))}
+          </div>
+
+          <Button
+            variant={hasNextSection ? 'outline' : 'primary'}
+            onClick={hasNextSection ? onNavigateNext : () => {}}
+            disabled={!hasNextSection}
+            className={!hasNextSection ? 'opacity-50 cursor-not-allowed' : ''}
+          >
+            {hasNextSection ? (
+              <>
+                Next Section
+                <ChevronRight className="h-4 w-4 ml-2" />
+              </>
+            ) : (
+              <>
+                Finish
+                <CheckCircle className="h-4 w-4 ml-2" />
+              </>
+            )}
+          </Button>
+        </div>
+
+        {/* Keyboard Shortcuts Help */}
+        <div className="mt-4 text-xs text-gray-500 text-center">
+          <p>Keyboard shortcuts: <kbd className="px-1.5 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs">Ctrl</kbd> + <kbd className="px-1.5 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs">←</kbd> Previous | <kbd className="px-1.5 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs">Ctrl</kbd> + <kbd className="px-1.5 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs">→</kbd> Next</p>
+        </div>
       </CardContent>
     </Card>
   );

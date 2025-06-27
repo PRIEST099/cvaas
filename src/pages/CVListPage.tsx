@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Eye, Share2, Download, MoreVertical, Sparkles, Code, X } from 'lucide-react';
+import { Plus, Eye, Share2, Download, MoreVertical, Sparkles, Code, X, Trash2, AlertTriangle } from 'lucide-react';
 import { cvService } from '../services/cvService';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
 import { Card, CardContent, CardHeader } from '../components/ui/Card';
 import { EphemeralLinksManager } from '../components/privacy/EphemeralLinksManager';
 
@@ -14,8 +15,15 @@ export function CVListPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [showEphemeralLinks, setShowEphemeralLinks] = useState(false);
   const [selectedCvForLinks, setSelectedCvForLinks] = useState<any>(null);
+  
+  // Delete confirmation state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [cvToDelete, setCvToDelete] = useState<any>(null);
+  const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
+    document.title = 'CVaaS | My CVs';
     if (user) {
       loadCVs();
     }
@@ -74,6 +82,41 @@ export function CVListPage() {
   const handleWidgetCV = (cv: any) => {
     navigate(`/cvs/${cv.id}/widget`);
   };
+
+  // Delete confirmation functions
+  const openDeleteModal = (cv: any) => {
+    setCvToDelete(cv);
+    setDeleteConfirmationText('');
+    setShowDeleteModal(true);
+  };
+
+  const closeDeleteModal = () => {
+    setShowDeleteModal(false);
+    setCvToDelete(null);
+    setDeleteConfirmationText('');
+    setIsDeleting(false);
+  };
+
+  const handleDeleteCV = async () => {
+    if (!cvToDelete || deleteConfirmationText !== cvToDelete.title) {
+      return;
+    }
+
+    try {
+      setIsDeleting(true);
+      await cvService.deleteCV(cvToDelete.id);
+      
+      // Remove the deleted CV from the local state
+      setCVs(prev => prev.filter(cv => cv.id !== cvToDelete.id));
+      
+      closeDeleteModal();
+    } catch (error) {
+      console.error('Failed to delete CV:', error);
+      setIsDeleting(false);
+    }
+  };
+
+  const isDeleteConfirmationValid = deleteConfirmationText === cvToDelete?.title;
 
   if (isLoading) {
     return (
@@ -141,9 +184,11 @@ export function CVListPage() {
                       </div>
                     </div>
                     
-                    <Button variant="ghost" size="sm" className="p-1 flex-shrink-0">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
+                    <div className="relative">
+                      <Button variant="ghost" size="sm" className="p-1 flex-shrink-0">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 
@@ -168,20 +213,20 @@ export function CVListPage() {
                     </div>
                   </div>
                   
-                  <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2">
+                  <div className="flex flex-col space-y-3">
                     <Button
                       size="sm"
-                      className="w-full sm:flex-1"
+                      className="w-full"
                       onClick={() => navigate(`/cvs/${cv.id}/edit`)}
                     >
-                      Edit
+                      Edit CV
                     </Button>
                     
-                    <div className="flex space-x-2 w-full sm:w-auto">
+                    <div className="flex space-x-2">
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        className="flex-1 sm:flex-none p-2"
+                        className="flex-1 p-2"
                         onClick={() => handleViewCV(cv)}
                         title="View CV"
                       >
@@ -191,7 +236,7 @@ export function CVListPage() {
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        className="flex-1 sm:flex-none p-2"
+                        className="flex-1 p-2"
                         onClick={() => handleShareCV(cv)}
                         title="Share CV"
                       >
@@ -201,11 +246,21 @@ export function CVListPage() {
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        className="flex-1 sm:flex-none p-2"
+                        className="flex-1 p-2"
                         onClick={() => handleWidgetCV(cv)}
                         title="CV Widget"
                       >
                         <Code className="h-4 w-4" />
+                      </Button>
+
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1 p-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => openDeleteModal(cv)}
+                        title="Delete CV"
+                      >
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
@@ -229,6 +284,89 @@ export function CVListPage() {
               </Card>
             );
           })}
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && cvToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md shadow-2xl">
+            <CardHeader className="bg-red-600 text-white rounded-t-lg">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-white bg-opacity-20 rounded-lg">
+                  <AlertTriangle className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg">Delete CV</h3>
+                  <p className="text-red-100 text-sm">This action cannot be undone</p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              <div className="space-y-3">
+                <p className="text-gray-700">
+                  You are about to permanently delete the CV <strong>"{cvToDelete.title}"</strong>. 
+                  This will remove all associated data including sections, experience, education, and skills.
+                </p>
+                
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                  <div className="flex items-start space-x-2">
+                    <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm text-yellow-800">
+                      <strong>Warning:</strong> This action is irreversible. All data will be permanently lost.
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    To confirm deletion, type the CV title exactly as shown:
+                  </label>
+                  <div className="mb-2 p-2 bg-gray-100 rounded border text-sm font-mono">
+                    {cvToDelete.title}
+                  </div>
+                  <Input
+                    value={deleteConfirmationText}
+                    onChange={(e) => setDeleteConfirmationText(e.target.value)}
+                    placeholder="Type the CV title here"
+                    className={`${
+                      deleteConfirmationText && !isDeleteConfirmationValid 
+                        ? 'border-red-300 focus:border-red-500 focus:ring-red-500' 
+                        : isDeleteConfirmationValid 
+                        ? 'border-green-300 focus:border-green-500 focus:ring-green-500'
+                        : ''
+                    }`}
+                    autoFocus
+                  />
+                  {deleteConfirmationText && !isDeleteConfirmationValid && (
+                    <p className="text-red-600 text-xs mt-1">
+                      The text doesn't match the CV title
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex space-x-3 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={closeDeleteModal}
+                  className="flex-1"
+                  disabled={isDeleting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="danger"
+                  onClick={handleDeleteCV}
+                  disabled={!isDeleteConfirmationValid || isDeleting}
+                  isLoading={isDeleting}
+                  className="flex-1"
+                >
+                  {isDeleting ? 'Deleting...' : 'Delete CV'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
 

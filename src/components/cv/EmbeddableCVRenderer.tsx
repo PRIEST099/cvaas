@@ -17,7 +17,7 @@ interface EmbeddableCVRendererProps {
   className?: string;
 }
 
-export function EmbeddableCVRenderer({ cv, widgetConfig, className = '' }: EmbeddableCVRendererProps) {
+const EmbeddableCVRenderer = ({ cv, widgetConfig, className = '' }: EmbeddableCVRendererProps) => {
   const config = widgetConfig || {
     theme: 'light',
     size: 'small',
@@ -166,6 +166,18 @@ export function EmbeddableCVRenderer({ cv, widgetConfig, className = '' }: Embed
                 <li key={i}>{line}</li>
               ))}
             </ul>
+            {project.technologies && project.technologies.length > 0 && (
+              <div className="mt-1 text-xs text-gray-600">
+                <span className="font-medium">Technologies:</span> {project.technologies.join(', ')}
+              </div>
+            )}
+            {project.projectUrl && (
+              <div className="mt-1 text-xs text-blue-600">
+                <a href={project.projectUrl} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                  View Project
+                </a>
+              </div>
+            )}
           </div>
         ))}
         <hr className="border-t border-gray-300 mt-2 mb-4" />
@@ -196,4 +208,6 @@ export function EmbeddableCVRenderer({ cv, widgetConfig, className = '' }: Embed
       })}
     </div>
   );
-}
+};
+
+export { EmbeddableCVRenderer };

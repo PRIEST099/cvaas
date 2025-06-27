@@ -50,7 +50,7 @@ interface CardFooterProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
 }
 
-export function CardFooter({ className, children, ...props }: CardFooterProps) {
+function CardFooter({ className, children, ...props }: CardFooterProps) {
   return (
     <div
       className={cn('px-6 py-4 border-t border-gray-200', className)}

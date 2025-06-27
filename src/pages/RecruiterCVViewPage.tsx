@@ -14,12 +14,19 @@ import {
   MoreVertical,
   Shield,
   Clock,
-  Target
+  Target,
+  FileText,
+  ExternalLink,
+  Download,
+  Share2
 } from 'lucide-react';
 import { talentService } from '../services/talentService';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent, CardHeader } from '../components/ui/Card';
+import { SendInvitationModal } from '../components/invitations/SendInvitationModal';
+import { EmbeddableCVRenderer } from '../components/cv/EmbeddableCVRenderer';
+import { WidgetConfig } from '../types';
 
 export function RecruiterCVViewPage() {
   const { cvId } = useParams<{ cvId: string }>();
@@ -28,6 +35,7 @@ export function RecruiterCVViewPage() {
   const [candidateProfile, setCandidateProfile] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showInvitationModal, setShowInvitationModal] = useState(false);
 
   useEffect(() => {
     if (cvId && user?.role === 'recruiter') {
@@ -48,50 +56,25 @@ export function RecruiterCVViewPage() {
     }
   };
 
-  const renderSection = (section: any) => {
-    switch (section.section_type) {
-      case 'summary':
-        return (
-          <Card key={section.section_type}>
-            <CardHeader>
-              <h3 className="font-semibold">Professional Summary</h3>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-700 leading-relaxed">
-                {section.content?.summary || 'No summary provided'}
-              </p>
-            </CardContent>
-          </Card>
-        );
-
-      case 'personal_info':
-        return (
-          <Card key={section.section_type}>
-            <CardHeader>
-              <h3 className="font-semibold">Professional Information</h3>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {section.content?.title && (
-                  <div className="flex items-center">
-                    <User className="h-4 w-4 text-gray-400 mr-2" />
-                    <span className="text-gray-700">{section.content.title}</span>
-                  </div>
-                )}
-                {section.content?.location && (
-                  <div className="flex items-center">
-                    <MapPin className="h-4 w-4 text-gray-400 mr-2" />
-                    <span className="text-gray-700">{section.content.location}</span>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        );
-
-      default:
-        return null;
+  const handleSendInvitation = () => {
+    // Only show invitation modal if we have a valid user_id
+    if (candidateProfile?.user_id) {
+      setShowInvitationModal(true);
+    } else {
+      console.error('Cannot send invitation: user_id not available');
+      // You might want to show an error message to the user here
     }
+  };
+
+  // Configure widget settings to hide personal information
+  const widgetConfig: WidgetConfig = {
+    theme: 'light',
+    size: 'medium',
+    sections: ['personal_info', 'summary', 'education', 'experience', 'skills', 'projects'],
+    showPhoto: false,
+    showContact: false, // Hide contact information
+    customCSS: '',
+    autoUpdate: false
   };
 
   if (user?.role !== 'recruiter') {
@@ -168,7 +151,11 @@ export function RecruiterCVViewPage() {
                 <Bookmark className="h-4 w-4 mr-2" />
                 Save to Pool
               </Button>
-              <Button variant="outline">
+              <Button 
+                variant="outline" 
+                onClick={handleSendInvitation}
+                disabled={!candidateProfile?.user_id}
+              >
                 <Send className="h-4 w-4 mr-2" />
                 Send Invitation
               </Button>
@@ -221,9 +208,14 @@ export function RecruiterCVViewPage() {
                 <div className="border-t pt-4">
                   <h5 className="font-medium text-gray-900 mb-2">Quick Actions</h5>
                   <div className="space-y-2">
-                    <Button size="sm" className="w-full">
+                    <Button 
+                      size="sm" 
+                      className="w-full" 
+                      onClick={handleSendInvitation}
+                      disabled={!candidateProfile?.user_id}
+                    >
                       <Send className="h-4 w-4 mr-2" />
-                      Send Message
+                      Send Invitation
                     </Button>
                     <Button size="sm" variant="outline" className="w-full">
                       <Target className="h-4 w-4 mr-2" />
@@ -235,197 +227,40 @@ export function RecruiterCVViewPage() {
             </Card>
           </div>
 
-          {/* Main Content */}
-          <div className="lg:col-span-3 space-y-6">
-            {/* Sections */}
-            {candidateProfile.sections && candidateProfile.sections
-              .filter((section: any) => section.is_visible)
-              .map((section: any) => renderSection(section))}
-
-            {/* Experience */}
-            {candidateProfile.experience && candidateProfile.experience.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <h3 className="font-semibold flex items-center">
-                    <Building className="h-5 w-5 mr-2" />
-                    Professional Experience
-                  </h3>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-6">
-                    {candidateProfile.experience.map((exp: any, index: number) => (
-                      <div key={index} className="border-l-2 border-blue-200 pl-4">
-                        <div className="flex items-start justify-between mb-2">
-                          <div>
-                            <h4 className="font-medium text-gray-900">{exp.position}</h4>
-                            <p className="text-blue-600 font-medium">{exp.company}</p>
-                            {exp.location && (
-                              <p className="text-sm text-gray-600 flex items-center mt-1">
-                                <MapPin className="h-3 w-3 mr-1" />
-                                {exp.location}
-                              </p>
-                            )}
-                          </div>
-                          <div className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                            <Calendar className="h-3 w-3 inline mr-1" />
-                            {exp.start_date && new Date(exp.start_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
-                            {' - '}
-                            {exp.is_current ? 'Present' : 
-                             (exp.end_date && new Date(exp.end_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }))
-                            }
-                          </div>
-                        </div>
-                        {exp.description && (
-                          <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-line">
-                            {exp.description}
-                          </p>
-                        )}
-                        {exp.skills_used && exp.skills_used.length > 0 && (
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            {exp.skills_used.map((skill: string, skillIndex: number) => (
-                              <span
-                                key={skillIndex}
-                                className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800"
-                              >
-                                {skill}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Education */}
-            {candidateProfile.education && candidateProfile.education.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <h3 className="font-semibold flex items-center">
-                    <Award className="h-5 w-5 mr-2" />
-                    Education
-                  </h3>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {candidateProfile.education.map((edu: any, index: number) => (
-                      <div key={index} className="border-l-2 border-green-200 pl-4">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <h4 className="font-medium text-gray-900">
-                              {edu.degree} {edu.field_of_study && `in ${edu.field_of_study}`}
-                            </h4>
-                            <p className="text-green-600 font-medium">{edu.institution}</p>
-                            {edu.gpa && (
-                              <p className="text-sm text-gray-600 mt-1">GPA: {edu.gpa}</p>
-                            )}
-                          </div>
-                          {(edu.start_date || edu.end_date) && (
-                            <div className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                              {edu.start_date && new Date(edu.start_date).getFullYear()}
-                              {edu.end_date && ` - ${new Date(edu.end_date).getFullYear()}`}
-                              {edu.is_current && ' - Present'}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Skills */}
-            {candidateProfile.skills && candidateProfile.skills.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <h3 className="font-semibold flex items-center">
-                    <Star className="h-5 w-5 mr-2" />
-                    Skills & Expertise
-                  </h3>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {candidateProfile.skills.reduce((acc: any, skill: any) => {
-                      const category = skill.category || 'General';
-                      if (!acc[category]) acc[category] = [];
-                      acc[category].push(skill);
-                      return acc;
-                    }, {}) && Object.entries(candidateProfile.skills.reduce((acc: any, skill: any) => {
-                      const category = skill.category || 'General';
-                      if (!acc[category]) acc[category] = [];
-                      acc[category].push(skill);
-                      return acc;
-                    }, {})).map(([category, skills]: [string, any]) => (
-                      <div key={category}>
-                        <h4 className="font-medium text-gray-900 mb-3">{category}</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          {skills.map((skill: any, index: number) => (
-                            <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded">
-                              <span className="font-medium text-gray-900">{skill.name}</span>
-                              {skill.proficiency_level && (
-                                <div className="flex items-center space-x-2">
-                                  <div className="w-16 bg-gray-200 rounded-full h-2">
-                                    <div
-                                      className="bg-blue-600 h-2 rounded-full"
-                                      style={{ width: `${skill.proficiency_level}%` }}
-                                    />
-                                  </div>
-                                  <span className="text-xs text-gray-600">{skill.proficiency_level}%</span>
-                                </div>
-                              )}
-                              {skill.is_verified && (
-                                <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                                  Verified
-                                </span>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Projects */}
-            {candidateProfile.projects && candidateProfile.projects.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <h3 className="font-semibold">Projects</h3>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid md:grid-cols-2 gap-6">
-                    {candidateProfile.projects.map((project: any, index: number) => (
-                      <div key={index} className="border border-gray-200 rounded-lg p-4">
-                        <h4 className="font-medium text-gray-900 mb-2">{project.title}</h4>
-                        {project.description && (
-                          <p className="text-gray-700 text-sm mb-3">{project.description}</p>
-                        )}
-                        {project.technologies && project.technologies.length > 0 && (
-                          <div className="flex flex-wrap gap-2">
-                            {project.technologies.map((tech: string, techIndex: number) => (
-                              <span
-                                key={techIndex}
-                                className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800"
-                              >
-                                {tech}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+          {/* Main Content - CV Preview */}
+          <div className="lg:col-span-3">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <h3 className="font-semibold">Candidate CV</h3>
+                <div className="text-sm text-gray-500">
+                  <Eye className="h-4 w-4 inline mr-1" />
+                  Anonymized View
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                  <EmbeddableCVRenderer 
+                    cv={candidateProfile} 
+                    widgetConfig={widgetConfig}
+                  />
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>
+
+      {/* Send Invitation Modal */}
+      {showInvitationModal && candidateProfile?.user_id && (
+        <SendInvitationModal
+          isOpen={showInvitationModal}
+          onClose={() => setShowInvitationModal(false)}
+          candidateId={candidateProfile.user_id}
+          cvId={candidateProfile.cv_id}
+          candidateName={candidateProfile.display_name}
+          cvTitle={candidateProfile.cv_title}
+        />
+      )}
     </div>
   );
 }

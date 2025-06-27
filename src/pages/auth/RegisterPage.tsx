@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { FileText, Eye, EyeOff, Building, User, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
@@ -26,9 +26,26 @@ export function RegisterPage() {
   const { register } = useAuth();
   const navigate = useNavigate();
 
+  // Force role to candidate if recruiter is initially set from URL or elsewhere
+  useEffect(() => {
+    if (formData.role === 'recruiter') {
+      setFormData(prev => ({ ...prev, role: 'candidate' }));
+    }
+  }, []);
+
+  useEffect(() => {
+    document.title = 'CVaaS | Create Account';
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    // Disable recruiter registration
+    if (formData.role === 'recruiter') {
+      setError('Recruiter registration is coming soon!');
+      return;
+    }
 
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
@@ -116,16 +133,18 @@ export function RegisterPage() {
                   </button>
                   <button
                     type="button"
-                    className={`p-4 border rounded-lg text-left transition-colors ${
+                    disabled
+                    className={`p-4 border rounded-lg text-left transition-colors cursor-not-allowed opacity-50 ${
                       formData.role === 'recruiter'
                         ? 'border-blue-500 bg-blue-50 text-blue-700'
-                        : 'border-gray-300 hover:border-gray-400'
+                        : 'border-gray-300'
                     }`}
-                    onClick={() => updateFormData('role', 'recruiter')}
+                    onClick={() => {}}
                   >
                     <Building className="h-6 w-6 mb-2" />
                     <div className="font-medium">Recruiter</div>
                     <div className="text-sm text-gray-500">Find talent</div>
+                    <div className="mt-1 text-xs font-semibold text-orange-500">Coming Soon</div>
                   </button>
                 </div>
               </div>
@@ -156,6 +175,7 @@ export function RegisterPage() {
                 placeholder="john@example.com"
               />
 
+              {/* Company Name shows only if role is recruiter (but recruiter disabled anyway) */}
               {formData.role === 'recruiter' && (
                 <Input
                   label="Company name"

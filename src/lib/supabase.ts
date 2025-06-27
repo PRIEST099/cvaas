@@ -30,7 +30,7 @@ export async function getCurrentUser() {
 }
 
 // Helper function to get user profile
-export async function getUserProfile(userId: string) {
+async function getUserProfile(userId: string) {
   const { data, error } = await supabase
     .from('users')
     .select('*')

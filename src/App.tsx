@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
@@ -26,9 +26,15 @@ import { QuestSubmissionDetailsPage } from './pages/QuestSubmissionDetailsPage';
 import { MyBadgesPage } from './pages/MyBadgesPage';
 import { LeaderboardPage } from './pages/LeaderboardPage';
 import { RecruiterCVViewPage } from './pages/RecruiterCVViewPage';
+import { BoltNewBadge } from './components/ui/bolt-new-badge';
 
 function AppRoutes() {
   const { user, supabaseUser, isLoading } = useAuth();
+
+  // Set default title
+  useEffect(() => {
+    document.title = 'CVaaS - Professional CV Management Platform';
+  }, []);
 
   // Show loading spinner while auth is initializing
   if (isLoading) {
@@ -58,7 +64,6 @@ function AppRoutes() {
         <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <LoginPage />} />
         <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <RegisterPage />} />
         <Route path="/complete-profile" element={user ? <Navigate to="/dashboard" /> : <CompleteProfilePage />} />
-        
         <Route
           path="/dashboard"
           element={
@@ -67,7 +72,6 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        
         {/* CV Management Routes (Candidates) */}
         <Route
           path="/cvs"
@@ -77,7 +81,6 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        
         <Route
           path="/cvs/:cvId/edit"
           element={
@@ -86,7 +89,6 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        
         <Route
           path="/cvs/:cvId/widget"
           element={
@@ -95,8 +97,7 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        
-        {/* Quest Management Routes (Recruiters) */}
+        {/* Quest Management (Recruiters) */}
         <Route
           path="/challenges/new"
           element={
@@ -105,7 +106,6 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        
         <Route
           path="/challenges/:questId/edit"
           element={
@@ -114,7 +114,6 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        
         <Route
           path="/recruiter/quests"
           element={
@@ -123,7 +122,6 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        
         <Route
           path="/submissions"
           element={
@@ -132,7 +130,6 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        
         <Route
           path="/submissions/:submissionId/review"
           element={
@@ -141,8 +138,7 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        
-        {/* Challenge Submission Route (Candidates) */}
+        {/* Challenge Submission (Candidates) */}
         <Route
           path="/challenges/:questId/submit"
           element={
@@ -151,8 +147,7 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        
-        {/* Quest Submission Details Route (Candidates) */}
+        {/* Quest Submission Details (Candidates) */}
         <Route
           path="/my-submissions/:submissionId"
           element={
@@ -161,8 +156,7 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        
-        {/* Badges and Leaderboard (Candidates) */}
+        {/* Badges & Leaderboard (Candidates) */}
         <Route
           path="/my-badges"
           element={
@@ -171,7 +165,6 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        
         <Route
           path="/leaderboard"
           element={
@@ -180,7 +173,6 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        
         {/* Talent Discovery (Recruiters) */}
         <Route
           path="/talent"
@@ -190,7 +182,6 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        
         {/* Recruiter CV View */}
         <Route
           path="/talent/cv/:cvId"
@@ -200,8 +191,7 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        
-        {/* Challenges (Both roles) */}
+        {/* General Challenges */}
         <Route
           path="/challenges"
           element={
@@ -210,7 +200,6 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        
         {/* Syndication (Recruiters) */}
         <Route
           path="/syndication"
@@ -220,7 +209,6 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        
         {/* Enterprise (Recruiters) */}
         <Route
           path="/enterprise"
@@ -230,7 +218,6 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        
         {/* Legacy/Alias routes */}
         <Route path="/quests" element={<ProtectedRoute><ChallengesPage /></ProtectedRoute>} />
         <Route path="/projects" element={<ProtectedRoute><div className="p-8">Projects page coming soon...</div></ProtectedRoute>} />
@@ -242,23 +229,28 @@ function AppRoutes() {
 
 function App() {
   return (
-    <Router>
-      {/* Public routes that don't require authentication */}
-      <Routes>
-        {/* Ephemeral CV link - publicly accessible */}
-        <Route path="/cv/ephemeral/:accessToken" element={<PublicCVViewPage />} />
-        
-        {/* Widget view - publicly accessible */}
-        <Route path="/widget/cv/:cvId" element={<WidgetViewPage />} />
-        
-        {/* All other routes require authentication context */}
-        <Route path="/*" element={
-          <AuthProvider>
-            <AppRoutes />
-          </AuthProvider>
-        } />
-      </Routes>
-    </Router>
+    <>
+      {/* Badge always visible */}
+      <BoltNewBadge position="bottom-left" variant="text" size="medium" />
+
+      <Router>
+        {/* Public routes */}
+        <Routes>
+          <Route path="/cv/ephemeral/:accessToken" element={<PublicCVViewPage />} />
+          <Route path="/widget/cv/:cvId" element={<WidgetViewPage />} />
+
+          {/* All other routes go through auth */}
+          <Route
+            path="/*"
+            element={
+              <AuthProvider>
+                <AppRoutes />
+              </AuthProvider>
+            }
+          />
+        </Routes>
+      </Router>
+    </>
   );
 }
 

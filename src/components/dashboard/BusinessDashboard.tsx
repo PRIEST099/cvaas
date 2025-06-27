@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Users, Briefcase, Target, TrendingUp, Clock, CheckCircle } from 'lucide-react';
+import { Plus, Users, Briefcase, Target, TrendingUp, Clock, CheckCircle, Send, Mail, Calendar } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { questService } from '../../services/questService';
+import { talentService } from '../../services/talentService';
 import { Button } from '../ui/Button';
 import { Card, CardContent, CardHeader } from '../ui/Card';
 
@@ -10,6 +11,14 @@ export function BusinessDashboard() {
   const { user } = useAuth();
   const [quests, setQuests] = useState([]);
   const [submissions, setSubmissions] = useState([]);
+  const [invitations, setInvitations] = useState([]);
+  const [invitationStats, setInvitationStats] = useState({
+    total: 0,
+    pending: 0,
+    accepted: 0,
+    declined: 0,
+    responseRate: 0
+  });
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -21,13 +30,19 @@ export function BusinessDashboard() {
   const loadDashboardData = async () => {
     try {
       setIsLoading(true);
-      const [questsData, submissionsData] = await Promise.all([
+      const [questsData, submissionsData, invitationsData] = await Promise.all([
         questService.getQuests(user?.id),
-        questService.getSubmissions()
+        questService.getSubmissions({ forRecruiter: true }),
+        talentService.getInvitations()
       ]);
       
       setQuests(questsData);
       setSubmissions(submissionsData);
+      setInvitations(invitationsData);
+      
+      // Get invitation stats
+      const stats = await talentService.getInvitationStats();
+      setInvitationStats(stats);
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
     } finally {
@@ -157,58 +172,93 @@ export function BusinessDashboard() {
           </CardContent>
         </Card>
 
-        {/* Recent Submissions */}
+        {/* Recent Invitations */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <h2 className="text-xl font-semibold">Recent Submissions</h2>
+            <h2 className="text-xl font-semibold">Recent Invitations</h2>
             <Button size="sm" variant="outline">
-              <Link to="/submissions">View All</Link>
+              <Link to="/talent">Find Candidates</Link>
             </Button>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {submissions.slice(0, 3).map((submission) => (
-              <div key={submission.id} className="p-4 border border-gray-200 rounded-lg">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h3 className="font-medium text-gray-900">Quest Submission</h3>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Submitted {new Date(submission.submitted_at).toLocaleDateString()}
-                    </p>
+          <CardContent>
+            {invitations.length > 0 ? (
+              <div className="space-y-4">
+                {invitations.slice(0, 3).map((invitation: any) => (
+                  <div key={invitation.id} className="p-4 border border-gray-200 rounded-lg">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="flex items-center space-x-2">
+                          <Mail className="h-4 w-4 text-blue-600" />
+                          <h4 className="font-medium text-gray-900">
+                            Invitation to {invitation.candidates?.first_name || 'Candidate'} {invitation.candidates?.last_name || invitation.candidateId.slice(-8)}
+                          </h4>
+                        </div>
+                        <div className="flex items-center space-x-3 text-sm text-gray-500 mt-2">
+                          <span className="flex items-center">
+                            <Calendar className="h-3 w-3 mr-1" />
+                            Sent {new Date(invitation.createdAt).toLocaleDateString()}
+                          </span>
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${
+                            invitation.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                            invitation.status === 'accepted' ? 'bg-green-100 text-green-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {invitation.status.charAt(0).toUpperCase() + invitation.status.slice(1)}
+                          </span>
+                        </div>
+                      </div>
+                      <Button size="sm" variant="outline">
+                        View Details
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    {submission.score && (
-                      <span className="text-sm font-medium">{submission.score}%</span>
-                    )}
-                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${
-                      submission.status === 'passed' ? 'bg-green-100 text-green-800' :
-                      submission.status === 'failed' ? 'bg-red-100 text-red-800' :
-                      submission.status === 'under_review' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-blue-100 text-blue-800'
-                    }`}>
-                      {submission.status.replace('_', ' ').charAt(0).toUpperCase() + submission.status.slice(1)}
-                    </span>
-                  </div>
-                </div>
-                <div className="mt-3 flex space-x-2">
-                  <Button size="sm" variant="outline">
-                    Review
-                  </Button>
-                  <Button size="sm" variant="ghost">
-                    View Details
-                  </Button>
-                </div>
+                ))}
+                <Button variant="outline" className="w-full">
+                  View All Invitations
+                </Button>
               </div>
-            ))}
-            {submissions.length === 0 && (
+            ) : (
               <div className="text-center py-8">
-                <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No submissions yet</h3>
-                <p className="text-gray-600">Submissions will appear here when candidates complete your quests</p>
+                <Send className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No invitations yet</h3>
+                <p className="text-gray-600 mb-4">Invite candidates to connect or complete quests</p>
+                <Button>
+                  <Link to="/talent">Find Candidates</Link>
+                </Button>
               </div>
             )}
           </CardContent>
         </Card>
       </div>
+
+      {/* Invitation Stats */}
+      {invitationStats.total > 0 && (
+        <Card>
+          <CardHeader>
+            <h2 className="text-xl font-semibold">Invitation Statistics</h2>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+              <div>
+                <div className="text-2xl font-bold text-gray-900">{invitationStats.total}</div>
+                <div className="text-sm text-gray-600">Total Invitations</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-yellow-600">{invitationStats.pending}</div>
+                <div className="text-sm text-gray-600">Pending</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-green-600">{invitationStats.accepted}</div>
+                <div className="text-sm text-gray-600">Accepted</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-blue-600">{Math.round(invitationStats.responseRate * 100)}%</div>
+                <div className="text-sm text-gray-600">Response Rate</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Quick Actions */}
       <Card>

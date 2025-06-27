@@ -1,5 +1,6 @@
 import { supabase, handleSupabaseError, getCurrentUser, checkUserRole } from '../lib/supabase';
 import { Database } from '../types/database';
+import { FeedbackItem, StructuredFeedback } from '../types';
 
 type Quest = Database['public']['Tables']['quests']['Row'];
 type QuestInsert = Database['public']['Tables']['quests']['Insert'];
@@ -245,7 +246,7 @@ class QuestService {
     review: {
       status: 'passed' | 'failed' | 'needs_revision';
       score?: number;
-      feedback?: any;
+      feedback?: StructuredFeedback;
     }
   ): Promise<QuestSubmission> {
     try {

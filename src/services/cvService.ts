@@ -1,5 +1,6 @@
 import { supabase, handleSupabaseError, getCurrentUser } from '../lib/supabase';
 import { Database } from '../types/database';
+import { aiService } from './aiService';
 
 type CV = Database['public']['Tables']['cvs']['Row'];
 type CVInsert = Database['public']['Tables']['cvs']['Insert'];
@@ -17,6 +18,18 @@ interface CVWithContent extends CV {
   experience: Experience[];
   projects: Project[];
   skills: Skill[];
+}
+
+interface OptimizationResult {
+  optimizedContent: any;
+  suggestions: string[];
+  confidence: number;
+}
+
+interface CVOptimizationResult {
+  optimizedSections: Record<string, any>;
+  suggestions: string[];
+  confidence: number;
 }
 
 class CVService {
@@ -134,6 +147,12 @@ class CVService {
           section_type: 'skills',
           title: 'Skills',
           display_order: 4
+        },
+        {
+          cv_id: data.id,
+          section_type: 'projects',
+          title: 'Projects',
+          display_order: 5
         }
       ];
 
@@ -217,6 +236,19 @@ class CVService {
   // CV Sections
   async updateCVSection(sectionId: string, updates: Partial<CVSection>): Promise<CVSection> {
     try {
+      // If we're updating content and there's no original_content stored, preserve the current content
+      if (updates.content) {
+        const { data: currentSection } = await supabase
+          .from('cv_sections')
+          .select('content, original_content')
+          .eq('id', sectionId)
+          .single();
+
+        if (currentSection && !currentSection.original_content) {
+          updates.original_content = currentSection.content;
+        }
+      }
+
       const { data, error } = await supabase
         .from('cv_sections')
         .update(updates)
@@ -230,6 +262,260 @@ class CVService {
       handleSupabaseError(error);
       throw error;
     }
+  }
+
+  // AI Optimization Methods
+  async optimizeCV(cvId: string, jobDescription?: string): Promise<CVOptimizationResult> {
+    try {
+      // Get the full CV with all sections
+      const cv = await this.getCV(cvId);
+      
+      // Update CV status to optimizing
+      await this.updateCV(cvId, { status: 'optimizing' });
+      
+      // Call AI service to optimize the entire CV
+      const result = await aiService.optimizeCVContent({
+        cvData: cv,
+        context: jobDescription
+      });
+      
+      // Apply optimized content to each section
+      const optimizedSectionIds: Record<string, any> = {};
+      
+      for (const sectionType in result.optimizedSections) {
+        const section = cv.sections.find(s => s.section_type === sectionType);
+        if (section) {
+          // Store original content if not already stored
+          const originalContent = section.original_content || section.content;
+          
+          // Update the section with optimized content
+          const updatedSection = await this.updateCVSection(section.id, {
+            content: result.optimizedSections[sectionType],
+            ai_optimized: true,
+            original_content: originalContent
+          });
+          
+          optimizedSectionIds[section.id] = updatedSection.content;
+        }
+      }
+      
+      // Update CV status back to previous state
+      await this.updateCV(cvId, {
+        status: cv.status === 'optimizing' ? 'draft' : cv.status
+      });
+      
+      return {
+        optimizedSections: result.optimizedSections,
+        suggestions: result.suggestions || [],
+        confidence: result.confidence || 0.8
+      };
+    } catch (error) {
+      // Ensure CV status is reset even if optimization fails
+      try {
+        const { data: currentCV } = await supabase
+          .from('cvs')
+          .select('status')
+          .eq('id', cvId)
+          .single();
+          
+        if (currentCV && currentCV.status === 'optimizing') {
+          await this.updateCV(cvId, { status: 'draft' });
+        }
+      } catch (statusError) {
+        console.error('Failed to reset CV status:', statusError);
+      }
+      
+      handleSupabaseError(error);
+      throw error;
+    }
+  }
+
+  async optimizeCVSection(sectionId: string, jobDescription?: string): Promise<OptimizationResult> {
+    try {
+      // Get current section data
+      const { data: section, error: fetchError } = await supabase
+        .from('cv_sections')
+        .select('*')
+        .eq('id', sectionId)
+        .single();
+
+      if (fetchError) throw fetchError;
+      if (!section) throw new Error('Section not found');
+
+      // Extract text content based on section type
+      const textToOptimize = this.extractTextFromSectionContent(section.content, section.section_type);
+      
+      if (!textToOptimize.trim()) {
+        throw new Error('No content to optimize in this section');
+      }
+
+      // Call AI service for optimization
+      const optimizationResponse = await aiService.optimizeText({
+        text: textToOptimize,
+        context: jobDescription,
+        sectionType: section.section_type
+      });
+
+      // Create optimized content structure
+      const optimizedContent = this.createOptimizedSectionContent(
+        section.content,
+        optimizationResponse.optimizedText,
+        section.section_type
+      );
+
+      // Store original content if not already stored
+      const updateData: any = {
+        content: optimizedContent,
+        ai_optimized: true
+      };
+
+      if (!section.original_content) {
+        updateData.original_content = section.content;
+      }
+
+      // Update the section with optimized content
+      const { error: updateError } = await supabase
+        .from('cv_sections')
+        .update(updateData)
+        .eq('id', sectionId);
+
+      if (updateError) throw updateError;
+
+      return {
+        optimizedContent,
+        suggestions: optimizationResponse.suggestions || [],
+        confidence: optimizationResponse.confidence || 0.8
+      };
+    } catch (error) {
+      handleSupabaseError(error);
+      throw error;
+    }
+  }
+
+  async rollbackCVSection(sectionId: string): Promise<CVSection> {
+    try {
+      // Get current section data
+      const { data: section, error: fetchError } = await supabase
+        .from('cv_sections')
+        .select('*')
+        .eq('id', sectionId)
+        .single();
+
+      if (fetchError) throw fetchError;
+      if (!section) throw new Error('Section not found');
+      if (!section.original_content) throw new Error('No original content to rollback to');
+
+      // Rollback to original content
+      const { data, error } = await supabase
+        .from('cv_sections')
+        .update({
+          content: section.original_content,
+          ai_optimized: false,
+          original_content: null
+        })
+        .eq('id', sectionId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      handleSupabaseError(error);
+      throw error;
+    }
+  }
+
+  // Helper methods for AI optimization
+  private extractTextFromSectionContent(content: any, sectionType: string): string {
+    if (!content) return '';
+
+    switch (sectionType) {
+      case 'summary':
+        return content.summary || '';
+      
+      case 'experience':
+        if (content.experiences && Array.isArray(content.experiences)) {
+          return content.experiences
+            .map((exp: any) => exp.description || '')
+            .filter(Boolean)
+            .join('\n\n');
+        }
+        return '';
+      
+      case 'personal_info':
+        return content.title || content.summary || '';
+      
+      case 'projects':
+        if (content.projects && Array.isArray(content.projects)) {
+          return content.projects
+            .map((proj: any) => proj.description || '')
+            .filter(Boolean)
+            .join('\n\n');
+        }
+        return '';
+      
+      case 'skills':
+        if (content.skillCategories && Array.isArray(content.skillCategories)) {
+          return content.skillCategories
+            .map((cat: any) => cat.skills?.map((skill: any) => skill.name).join(', ') || '')
+            .filter(Boolean)
+            .join('\n');
+        }
+        return '';
+      
+      default:
+        // For other section types, try to extract any text content
+        if (typeof content === 'string') return content;
+        if (content.description) return content.description;
+        if (content.content) return content.content;
+        return JSON.stringify(content);
+    }
+  }
+
+  private createOptimizedSectionContent(originalContent: any, optimizedText: string, sectionType: string): any {
+    if (!originalContent) return { optimizedText };
+
+    const optimized = { ...originalContent };
+
+    switch (sectionType) {
+      case 'summary':
+        optimized.summary = optimizedText;
+        break;
+      
+      case 'experience':
+        if (optimized.experiences && Array.isArray(optimized.experiences)) {
+          // For now, apply optimization to the first experience entry
+          // In a more sophisticated implementation, you might want to optimize each experience separately
+          if (optimized.experiences.length > 0) {
+            optimized.experiences[0].description = optimizedText;
+          }
+        }
+        break;
+      
+      case 'personal_info':
+        optimized.title = optimizedText;
+        break;
+      
+      case 'projects':
+        if (optimized.projects && Array.isArray(optimized.projects)) {
+          // Apply optimization to the first project entry
+          if (optimized.projects.length > 0) {
+            optimized.projects[0].description = optimizedText;
+          }
+        }
+        break;
+      
+      case 'skills':
+        // For skills, the optimization might return a restructured list
+        // This is a simplified approach - you might want to parse the optimized text more intelligently
+        optimized.optimizedDescription = optimizedText;
+        break;
+      
+      default:
+        optimized.optimizedContent = optimizedText;
+    }
+
+    return optimized;
   }
 
   // Education Management
