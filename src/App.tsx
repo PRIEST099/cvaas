@@ -16,6 +16,7 @@ import { SyndicationPage } from './pages/SyndicationPage';
 import { WidgetPage } from './pages/WidgetPage';
 import { EnterprisePage } from './pages/EnterprisePage';
 import { PublicCVViewPage } from './pages/PublicCVViewPage';
+import { PermanentPublicCVViewPage } from './pages/PermanentPublicCVViewPage';
 import { WidgetViewPage } from './pages/WidgetViewPage';
 import { QuestBuilder } from './components/quests/QuestBuilder';
 import { RecruiterQuestsPage } from './pages/RecruiterQuestsPage';
@@ -237,6 +238,7 @@ function App() {
         {/* Public routes */}
         <Routes>
           <Route path="/cv/ephemeral/:accessToken" element={<PublicCVViewPage />} />
+          <Route path="/cv/public/:publicSlug" element={<PermanentPublicCVViewPage />} />
           <Route path="/widget/cv/:cvId" element={<WidgetViewPage />} />
 
           {/* All other routes go through auth */}
