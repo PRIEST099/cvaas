@@ -255,40 +255,6 @@ class SyndicationService {
       return [];
     }
   }
-
-  // Premium Features
-  async checkPremiumLinkAccess(): Promise<boolean> {
-    try {
-      const user = await getCurrentUser();
-      if (!user) return false;
-
-      const { data, error } = await supabase
-        .from('users')
-        .select('is_premium_link_subscriber')
-        .eq('id', user.id)
-        .single();
-
-      if (error) throw error;
-      return data?.is_premium_link_subscriber || false;
-    } catch (error) {
-      console.error('Failed to check premium access:', error);
-      return false;
-    }
-  }
-
-  async updatePremiumLinkSubscription(userId: string, isSubscribed: boolean): Promise<void> {
-    try {
-      const { error } = await supabase
-        .from('users')
-        .update({ is_premium_link_subscriber: isSubscribed })
-        .eq('id', userId);
-
-      if (error) throw error;
-    } catch (error) {
-      handleSupabaseError(error);
-      throw error;
-    }
-  }
 }
 
 export const syndicationService = new SyndicationService();

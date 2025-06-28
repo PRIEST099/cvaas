@@ -11,9 +11,11 @@ import {
   ExternalLink,
   Shield,
   AlertTriangle,
-  Infinity
+  Infinity,
+  Check,
+  X
 } from 'lucide-react';
-import { EphemeralLink } from '../../types';
+import { EphemeralLink, CustomSlugSuggestion } from '../../types';
 import { syndicationService } from '../../services/syndicationService';
 import { hashSha256Base64 } from '../../lib/utils';
 import { useAuth } from '../../contexts/AuthContext';
@@ -38,8 +40,14 @@ export function EphemeralLinksManager({ cvId }: EphemeralLinksManagerProps) {
     allowDownload: false,
     requirePassword: false,
     password: '',
-    noExpiry: false
+    noExpiry: false,
+    useCustomSlug: false,
+    customSlug: '',
+    isCheckingSlug: false,
+    isSlugAvailable: false
   });
+  const [slugSuggestions, setSlugSuggestions] = useState<CustomSlugSuggestion[]>([]);
+  const [isGeneratingSuggestions, setIsGeneratingSuggestions] = useState(false);
 
   useEffect(() => {
     loadLinks();
@@ -68,7 +76,8 @@ export function EphemeralLinksManager({ cvId }: EphemeralLinksManagerProps) {
         maxViews: newLink.maxViews,
         allowDownload: newLink.allowDownload,
         requirePassword: newLink.requirePassword,
-        password: newLink.requirePassword ? newLink.password : undefined
+        password: newLink.requirePassword ? newLink.password : undefined,
+        customSlug: newLink.useCustomSlug ? newLink.customSlug : undefined
       });
       
       // Add new link to the beginning of the array (most recent first)
@@ -80,7 +89,11 @@ export function EphemeralLinksManager({ cvId }: EphemeralLinksManagerProps) {
         allowDownload: false,
         requirePassword: false,
         password: '',
-        noExpiry: false
+        noExpiry: false,
+        useCustomSlug: false,
+        customSlug: '',
+        isCheckingSlug: false,
+        isSlugAvailable: false
       });
     } catch (error) {
       console.error('Failed to create ephemeral link:', error);
@@ -100,8 +113,14 @@ export function EphemeralLinksManager({ cvId }: EphemeralLinksManagerProps) {
     }
   };
 
-  const copyToClipboard = async (token: string) => {
-    const url = `${window.location.origin}/cv/ephemeral/${token}`;
+  const copyToClipboard = async (token: string, isCustomSlug: boolean = false) => {
+    let url;
+    if (isCustomSlug) {
+      url = `${window.location.origin}/cv/ephemeral/${token}`;
+    } else {
+      url = `${window.location.origin}/cv/ephemeral/${token}`;
+    }
+    
     try {
       await navigator.clipboard.writeText(url);
       setCopiedToken(token);
@@ -171,6 +190,63 @@ export function EphemeralLinksManager({ cvId }: EphemeralLinksManagerProps) {
     }));
   };
 
+  const handleCustomSlugChange = async (value: string) => {
+    const slug = value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
+    
+    setNewLink(prev => ({
+      ...prev,
+      customSlug: slug,
+      isCheckingSlug: true,
+      isSlugAvailable: false
+    }));
+    
+    if (slug.length >= 3) {
+      try {
+        const isAvailable = await syndicationService.isCustomSlugAvailable(slug);
+        setNewLink(prev => ({
+          ...prev,
+          isCheckingSlug: false,
+          isSlugAvailable: isAvailable
+        }));
+      } catch (error) {
+        console.error('Failed to check slug availability:', error);
+        setNewLink(prev => ({
+          ...prev,
+          isCheckingSlug: false,
+          isSlugAvailable: false
+        }));
+      }
+    } else {
+      setNewLink(prev => ({
+        ...prev,
+        isCheckingSlug: false,
+        isSlugAvailable: false
+      }));
+    }
+  };
+
+  const generateSlugSuggestions = async () => {
+    try {
+      setIsGeneratingSuggestions(true);
+      const suggestions = await syndicationService.generateCustomSlugSuggestions(user?.first_name || 'cv');
+      setSlugSuggestions(suggestions);
+    } catch (error) {
+      console.error('Failed to generate slug suggestions:', error);
+    } finally {
+      setIsGeneratingSuggestions(false);
+    }
+  };
+
+  const selectSuggestion = (suggestion: CustomSlugSuggestion) => {
+    if (suggestion.available) {
+      setNewLink(prev => ({
+        ...prev,
+        customSlug: suggestion.slug,
+        isSlugAvailable: true
+      }));
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -200,6 +276,7 @@ export function EphemeralLinksManager({ cvId }: EphemeralLinksManagerProps) {
           const isInactive = linkStatus.status !== 'active';
           const timeRemaining = formatTimeRemaining(link.expiresAt);
           const isNoExpiry = timeRemaining === 'No expiry';
+          const isCustomSlug = !!link.customSlug;
           
           return (
             <Card key={link.id} className={`transition-all duration-300 ${isInactive ? 'opacity-70 bg-gray-50' : 'hover:shadow-lg'}`}>
@@ -209,7 +286,14 @@ export function EphemeralLinksManager({ cvId }: EphemeralLinksManagerProps) {
                     <div className="flex items-center space-x-3 mb-3">
                       <LinkIcon className="h-5 w-5 text-blue-500" />
                       <span className="font-medium text-gray-900">
-                        Link #{link.id.slice(-6)}
+                        {isCustomSlug ? (
+                          <span className="flex items-center">
+                            <span className="text-blue-600">{link.customSlug}</span>
+                            <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">Custom</span>
+                          </span>
+                        ) : (
+                          `Link #${link.id.slice(-6)}`
+                        )}
                       </span>
                       {link.requirePassword && (
                         <Lock className="h-4 w-4 text-yellow-500" />
@@ -276,11 +360,11 @@ export function EphemeralLinksManager({ cvId }: EphemeralLinksManagerProps) {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => copyToClipboard(link.accessToken)}
+                      onClick={() => copyToClipboard(isCustomSlug ? link.customSlug! : link.accessToken, isCustomSlug)}
                       disabled={isInactive}
-                      className={copiedToken === link.accessToken ? 'bg-green-50 border-green-200 text-green-700' : ''}
+                      className={copiedToken === (isCustomSlug ? link.customSlug : link.accessToken) ? 'bg-green-50 border-green-200 text-green-700' : ''}
                     >
-                      {copiedToken === link.accessToken ? (
+                      {copiedToken === (isCustomSlug ? link.customSlug : link.accessToken) ? (
                         <>
                           <span className="text-xs">Copied!</span>
                         </>
@@ -292,7 +376,7 @@ export function EphemeralLinksManager({ cvId }: EphemeralLinksManagerProps) {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => window.open(`/cv/ephemeral/${link.accessToken}`, '_blank')}
+                      onClick={() => window.open(`/cv/ephemeral/${isCustomSlug ? link.customSlug : link.accessToken}`, '_blank')}
                       disabled={isInactive}
                     >
                       <ExternalLink className="h-4 w-4" />
@@ -328,6 +412,104 @@ export function EphemeralLinksManager({ cvId }: EphemeralLinksManagerProps) {
               <p className="text-blue-100 text-sm">Configure secure sharing options</p>
             </CardHeader>
             <CardContent className="space-y-6 p-6">
+              {/* Custom Slug Option */}
+              <div className="space-y-3">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={newLink.useCustomSlug}
+                    onChange={(e) => setNewLink(prev => ({ 
+                      ...prev, 
+                      useCustomSlug: e.target.checked,
+                      customSlug: e.target.checked ? prev.customSlug : ''
+                    }))}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">Use a custom link name</span>
+                </label>
+                
+                {newLink.useCustomSlug && (
+                  <div className="space-y-3">
+                    <div className="relative">
+                      <Input
+                        label="Custom Link Name"
+                        value={newLink.customSlug}
+                        onChange={(e) => handleCustomSlugChange(e.target.value)}
+                        placeholder="e.g., my-resume"
+                        className={`${
+                          newLink.customSlug && !newLink.isCheckingSlug ? 
+                            newLink.isSlugAvailable ? 'border-green-300 focus:border-green-500 focus:ring-green-500' : 
+                            'border-red-300 focus:border-red-500 focus:ring-red-500' 
+                          : ''
+                        }`}
+                      />
+                      {newLink.customSlug && !newLink.isCheckingSlug && (
+                        <div className="absolute right-2 top-8">
+                          {newLink.isSlugAvailable ? (
+                            <Check className="h-5 w-5 text-green-500" />
+                          ) : (
+                            <X className="h-5 w-5 text-red-500" />
+                          )}
+                        </div>
+                      )}
+                      {newLink.isCheckingSlug && (
+                        <div className="absolute right-2 top-8">
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {newLink.customSlug && !newLink.isSlugAvailable && !newLink.isCheckingSlug && (
+                      <p className="text-xs text-red-600">This link name is already taken. Please try another one.</p>
+                    )}
+                    
+                    {newLink.customSlug && newLink.customSlug.length < 3 && (
+                      <p className="text-xs text-gray-500">Custom link names must be at least 3 characters long.</p>
+                    )}
+                    
+                    <div>
+                      <p className="text-xs text-gray-500 mb-2">Suggestions:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {isGeneratingSuggestions ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                        ) : slugSuggestions.length > 0 ? (
+                          slugSuggestions.map((suggestion, index) => (
+                            <button
+                              key={index}
+                              onClick={() => selectSuggestion(suggestion)}
+                              disabled={!suggestion.available}
+                              className={`text-xs px-2 py-1 rounded-full ${
+                                suggestion.available ? 
+                                  'bg-blue-100 text-blue-800 hover:bg-blue-200 cursor-pointer' : 
+                                  'bg-gray-100 text-gray-500 cursor-not-allowed'
+                              }`}
+                            >
+                              {suggestion.slug}
+                            </button>
+                          ))
+                        ) : (
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={generateSlugSuggestions}
+                            className="text-xs"
+                          >
+                            Generate suggestions
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="text-xs text-gray-500 bg-blue-50 p-3 rounded-lg">
+                      <p>Your custom link will look like:</p>
+                      <p className="font-mono mt-1 text-blue-700">
+                        {window.location.origin}/cv/ephemeral/{newLink.customSlug || 'your-custom-name'}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* No Expiry Checkbox */}
               <div className="space-y-4">
                 <label className="flex items-center">
@@ -418,7 +600,10 @@ export function EphemeralLinksManager({ cvId }: EphemeralLinksManagerProps) {
                 <Button
                   onClick={handleCreateLink}
                   className="flex-1"
-                  disabled={newLink.requirePassword && !newLink.password.trim()}
+                  disabled={
+                    (newLink.requirePassword && !newLink.password.trim()) || 
+                    (newLink.useCustomSlug && (!newLink.customSlug || !newLink.isSlugAvailable))
+                  }
                 >
                   Create Link
                 </Button>
