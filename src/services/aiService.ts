@@ -40,6 +40,7 @@ interface CandidateMatchResponse {
     matchedSkills: string[];
     missingSkills: string[];
     notes: string;
+    hallucinatedSkills?: number;
   }[];
   suggestions?: string[];
 }
@@ -48,6 +49,16 @@ class AIService {
   private readonly apiUrl = 'https://api-inference.huggingface.co/models';
   private readonly modelId = import.meta.env.VITE_HF_MODEL_ID || 'mistralai/Mistral-7B-Instruct-v0.3';
   private readonly apiToken = import.meta.env.VITE_HUGGING_FACE_API_TOKEN;
+
+  // AI hallucination prevention instructions
+  private readonly hallucinationPrevention = `
+STRICTLY OBSERVE THESE RULES:
+1. NEVER invent facts, numbers, or achievements not in the original
+2. NEVER add skills/experiences not explicitly provided
+3. PRESERVE all original dates, names, and companies exactly
+4. If uncertain about optimization, return original text
+5. Quantifications MUST match original data exactly
+`.trim();
 
   constructor() {
     if (!this.apiToken) {
@@ -65,11 +76,11 @@ class AIService {
       const fullCV = JSON.parse(JSON.stringify(request.cvData));
       const sectionsToOptimize = this.extractOptimizableSections(fullCV);
       
-      // Construct the optimization prompt
+      // Construct the optimization prompt with hallucination prevention
       const prompt = this.buildCVOptimizationPrompt({
         ...request,
         cvData: { sections: sectionsToOptimize }
-      });
+      }) + `\n\n${this.hallucinationPrevention}`;
 
       const response = await fetch(`${this.apiUrl}/${this.modelId}`, {
         method: 'POST',
@@ -98,16 +109,21 @@ class AIService {
       
       // Handle different response formats
       let optimizedText = '';
-      if (Array.isArray(result) && result.length > 0) {
-        optimizedText = result[0].generated_text || result[0].text || '';
-      } else if (result.generated_text) {
-        optimizedText = result.generated_text;
-      } else if (typeof result === 'string') {
-        optimizedText = result;
+      if (Array.isArray(result)) {
+        optimizedText = result[0]?.generated_text || result[0]?.text || '';
+      } else if (result && typeof result === 'object') {
+        optimizedText = result.generated_text || result.text || '';
       }
 
+      // Strict empty check with fallback to original
       if (!optimizedText.trim()) {
-        throw new Error('No optimized content received from AI model');
+        return {
+          optimizedCV: fullCV,
+          optimizedSections: {},
+          confidence: 0,
+          aiDetectionScore: 1,
+          suggestions: ['AI returned empty response - using original content']
+        };
       }
 
       // Parse the AI response
@@ -116,8 +132,8 @@ class AIService {
       // Merge optimized sections back into full CV
       const mergedCV = this.mergeOptimizedSections(fullCV, optimizedSections);
       
-      // Apply humanization techniques to optimized sections
-      this.humanizeOptimizedContent(mergedCV);
+      // Apply humanization techniques with fact checking
+      this.humanizeOptimizedContent(mergedCV, fullCV);
       
       // Calculate human likeness score
       const contentStr = JSON.stringify(mergedCV);
@@ -133,7 +149,13 @@ class AIService {
       };
     } catch (error: any) {
       console.error('AI CV optimization failed:', error);
-      throw new Error(`AI CV optimization failed: ${error.message}`);
+      return {
+        optimizedCV: request.cvData,
+        optimizedSections: {},
+        confidence: 0,
+        aiDetectionScore: 1,
+        suggestions: [`Optimization failed: ${error.message}`]
+      };
     }
   }
 
@@ -186,7 +208,7 @@ class AIService {
       }
 
       // Parse the AI response
-      const matchResults = this.parseCandidateMatchResponse(matchText);
+      const matchResults = this.parseCandidateMatchResponse(matchText, request.candidates);
       
       return {
         matches: matchResults.matches,
@@ -194,7 +216,10 @@ class AIService {
       };
     } catch (error: any) {
       console.error('AI candidate matching failed:', error);
-      throw new Error(`AI candidate matching failed: ${error.message}`);
+      return {
+        matches: [],
+        suggestions: [`Candidate matching failed: ${error.message}`]
+      };
     }
   }
 
@@ -274,7 +299,7 @@ IMPORTANT:
     return prompt;
   }
 
-  private parseCandidateMatchResponse(responseText: string): CandidateMatchResponse {
+  private parseCandidateMatchResponse(responseText: string, originalCandidates: any[]): CandidateMatchResponse {
     try {
       let cleanedText = responseText.trim();
       
@@ -303,15 +328,29 @@ IMPORTANT:
         throw new Error('Invalid response format: matches array is missing');
       }
       
-      // Ensure each match has the required fields
-      const validatedMatches = parsedResponse.matches.map((match: any) => ({
-        candidateId: match.candidateId,
-        score: typeof match.score === 'number' ? match.score : 0,
-        relevance: typeof match.relevance === 'number' ? match.relevance : 0,
-        matchedSkills: Array.isArray(match.matchedSkills) ? match.matchedSkills : [],
-        missingSkills: Array.isArray(match.missingSkills) ? match.missingSkills : [],
-        notes: typeof match.notes === 'string' ? match.notes : ''
-      }));
+      // Validate matched skills against original
+      const validatedMatches = parsedResponse.matches.map((match: any) => {
+        const candidate = originalCandidates.find(c => c.cv_id === match.candidateId);
+        const originalSkills = candidate?.skills || [];
+        
+        // Filter out AI-invented skills
+        const validMatchedSkills = match.matchedSkills.filter((skill: string) => 
+          originalSkills.some((os: string) => 
+            os.toLowerCase().includes(skill.toLowerCase())
+          )
+        );
+
+        return {
+          candidateId: match.candidateId,
+          score: typeof match.score === 'number' ? Math.min(100, Math.max(0, match.score)) : 0,
+          relevance: typeof match.relevance === 'number' ? Math.min(100, Math.max(0, match.relevance)) : 0,
+          matchedSkills: validMatchedSkills,
+          missingSkills: Array.isArray(match.missingSkills) ? match.missingSkills : [],
+          notes: typeof match.notes === 'string' ? match.notes : '',
+          // Track hallucinated skills
+          hallucinatedSkills: match.matchedSkills.length - validMatchedSkills.length
+        };
+      });
       
       // Sort matches by score (highest first)
       validatedMatches.sort((a, b) => b.score - a.score);
@@ -416,6 +455,13 @@ Return ONLY valid JSON with optimized sections in this structure:
     ]
   }
 }
+
+CRITICAL SAFETY RULES:
+1. PRESERVE ALL original facts, numbers, and dates exactly
+2. NEVER add new companies, job titles, or education entries
+3. Quantifications MUST match original data exactly
+4. If original lacks metrics, DO NOT invent them
+5. Skills section MUST contain ONLY original skills
 
 CRITICAL: 
 1. Return ONLY the JSON object with optimized sections
@@ -650,8 +696,8 @@ CRITICAL:
     return mergedCV;
   }
 
-  private humanizeOptimizedContent(cvData: any): void {
-    if (!cvData.sections) return;
+  private humanizeOptimizedContent(optimizedCV: any, originalCV: any): void {
+    if (!optimizedCV.sections) return;
     
     const humanizeText = (text: string): string => {
       if (!text) return text;
@@ -669,27 +715,67 @@ CRITICAL:
         .replace(/;\s/g, () => Math.random() > 0.8 ? '; ' : ', ');
     };
 
+    // Recursive validation against original data
+    const validateAgainstOriginal = (optimized: any, original: any, path: string[]) => {
+      if (!optimized || !original) return;
+      
+      for (const key in optimized) {
+        const currentPath = [...path, key];
+        const fullPath = currentPath.join('.');
+
+        if (typeof optimized[key] === 'string') {
+          // Critical fields: preserve exactly
+          if (['fullName', 'email', 'phone', 'company', 'position', 'degree'].includes(key)) {
+            if (optimized[key] !== original[key]) {
+              console.warn(`Reverted field: ${fullPath} (AI changed factual data)`);
+              optimized[key] = original[key];
+            }
+          }
+          // Date validation
+          else if (key.includes('Date') || key.includes('date')) {
+            if (!this.validateDateConsistency(optimized[key], original[key])) {
+              console.warn(`Reverted date: ${fullPath}`);
+              optimized[key] = original[key];
+            }
+          }
+          // Apply humanization only after validation
+          else if (!['email', 'phone', 'fullName'].includes(key)) {
+            optimized[key] = humanizeText(optimized[key]);
+          }
+        } 
+        else if (typeof optimized[key] === 'object' && optimized[key] !== null) {
+          validateAgainstOriginal(
+            optimized[key], 
+            original[key], 
+            currentPath
+          );
+        }
+      }
+    };
+
     // Process only optimized sections
     const optimizableSectionTypes = ['personal_info', 'summary', 'experience', 'projects'];
     
-    cvData.sections.forEach((section: any) => {
+    optimizedCV.sections.forEach((section: any) => {
       if (optimizableSectionTypes.includes(section.section_type)) {
-        const processObject = (obj: any) => {
-          if (!obj) return;
-          
-          for (const key in obj) {
-            if (typeof obj[key] === 'string' && 
-                !['email', 'phone', 'fullName'].includes(key)) {
-              obj[key] = humanizeText(obj[key]);
-            } else if (typeof obj[key] === 'object' && obj[key] !== null) {
-              processObject(obj[key]);
-            }
-          }
-        };
+        const originalSection = originalCV.sections?.find(
+          (s: any) => s.section_type === section.section_type
+        )?.content || {};
         
-        processObject(section.content);
+        validateAgainstOriginal(
+          section.content,
+          originalSection,
+          [section.section_type]
+        );
       }
     });
+  }
+
+  private validateDateConsistency(optimizedDate: string, originalDate: string): boolean {
+    if (!originalDate) return true;
+    // Simple format normalization comparison
+    const normalize = (date: string) => date.replace(/[^0-9a-zA-Z]/g, '').toLowerCase();
+    return normalize(optimizedDate) === normalize(originalDate);
   }
 
   private calculateHumanLikeness(text: string): number {
@@ -763,7 +849,20 @@ CRITICAL:
     };
   }
 
+  private validateOptimizationRequest(request: OptimizationRequest) {
+    if (!request.text || request.text.trim().length < 10) {
+      throw new Error('Input text too short (minimum 10 characters)');
+    }
+    
+    if (request.text.length > 10000) {
+      throw new Error('Input text too long (maximum 10,000 characters)');
+    }
+  }
+
   async optimizeText(request: OptimizationRequest): Promise<OptimizationResponse> {
+    // Add input validation
+    this.validateOptimizationRequest(request);
+    
     if (!this.apiToken) {
       throw new Error('Hugging Face API token not configured. Please add VITE_HUGGING_FACE_API_TOKEN to your environment variables.');
     }
@@ -858,7 +957,11 @@ CRITICAL:
       };
     } catch (error: any) {
       console.error('AI optimization failed:', error);
-      throw new Error(`AI optimization failed: ${error.message}`);
+      return {
+        optimizedText: request.text,
+        suggestions: [`Optimization failed: ${error.message}`],
+        confidence: 0
+      };
     }
   }
 }

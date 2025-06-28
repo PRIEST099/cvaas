@@ -120,7 +120,7 @@ export function WidgetViewPage() {
         <div className="max-w-4xl mx-auto px-4 text-center">
           <div className="flex items-center justify-center mb-3">
             <Sparkles className="h-5 w-5 mr-2" />
-            <span className="font-semibold">Powered by CVaaS</span>
+            <span className="font-semibold">Powered by CVaaS and Bolt</span>
           </div>
           <p className="text-blue-100 text-sm mb-4">
             Create your own professional CV with dynamic widgets and real-time updates

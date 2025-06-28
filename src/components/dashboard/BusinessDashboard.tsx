@@ -73,7 +73,7 @@ export function BusinessDashboard() {
           Welcome back, {user?.first_name}!
         </h1>
         <p className="text-purple-100 text-lg">
-          Manage your hiring projects and discover top talent.
+          Manage your hiring projects and discover top talent. [ <b><i>UNDER DEVELOPMENT</i></b> ]
         </p>
       </div>
 

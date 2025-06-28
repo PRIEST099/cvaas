@@ -343,7 +343,7 @@ export function PublicCVViewPage() {
               <div className="text-center">
                 <div className="flex items-center justify-center mb-4">
                   <Sparkles className="h-6 w-6 mr-2" />
-                  <span className="text-lg font-semibold">Powered by CVaaS</span>
+                  <span className="text-lg font-semibold">Powered by CVaaS and <a href='https://bolt.new' target='blank'>Bolt</a></span>
                 </div>
                 <p className="text-blue-100 mb-6 max-w-2xl mx-auto">
                   Create your own professional CV with our AI-powered platform. 
