@@ -1,6 +1,7 @@
 import { supabase, handleSupabaseError, getCurrentUser } from '../lib/supabase';
 import { Database } from '../types/database';
 import { aiService } from './aiService';
+import { generatePublicSlug } from '../lib/utils';
 
 type CV = Database['public']['Tables']['cvs']['Row'];
 type CVInsert = Database['public']['Tables']['cvs']['Insert'];
@@ -179,6 +180,65 @@ class CVService {
         .maybeSingle();
 
       if (error) throw error;
+      return data;
+    } catch (error) {
+      handleSupabaseError(error);
+      throw error;
+    }
+  }
+
+  async publishCV(cvId: string): Promise<CV> {
+    try {
+      const user = await getCurrentUser();
+      if (!user) throw new Error('Authentication required');
+      
+      // Generate a unique public URL slug
+      const publicSlug = generatePublicSlug();
+      
+      // Update the CV status to published and set the public URL
+      const { data, error } = await supabase
+        .from('cvs')
+        .update({
+          status: 'published',
+          is_public: true,
+          public_url: publicSlug
+        })
+        .eq('id', cvId)
+        .eq('user_id', user.id) // Ensure the user owns this CV
+        .select()
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!data) throw new Error('CV not found or you do not have permission to publish it');
+      
+      return data;
+    } catch (error) {
+      handleSupabaseError(error);
+      throw error;
+    }
+  }
+
+  async unpublishCV(cvId: string): Promise<CV> {
+    try {
+      const user = await getCurrentUser();
+      if (!user) throw new Error('Authentication required');
+      
+      // Update the CV status to draft and remove the public URL
+      const { data, error } = await supabase
+        .from('cvs')
+        .update({
+          status: 'draft',
+          is_public: false,
+          public_url: null
+        })
+        .eq('id', cvId)
+        .eq('user_id', user.id) // Ensure the user owns this CV
+        .select()
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!data) throw new Error('CV not found or you do not have permission to unpublish it');
+      
       return data;
     } catch (error) {
       handleSupabaseError(error);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Eye, Share2, Download, MoreVertical, Sparkles, Code, X, Trash2, AlertTriangle } from 'lucide-react';
+import { Plus, Eye, Share2, Download, MoreVertical, Sparkles, Code, X, Trash2, AlertTriangle, Globe } from 'lucide-react';
 import { cvService } from '../services/cvService';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/Button';
@@ -15,6 +15,8 @@ export function CVListPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [showEphemeralLinks, setShowEphemeralLinks] = useState(false);
   const [selectedCvForLinks, setSelectedCvForLinks] = useState<any>(null);
+  const [isPublishing, setIsPublishing] = useState<string | null>(null);
+  const [isUnpublishing, setIsUnpublishing] = useState<string | null>(null);
   
   // Delete confirmation state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -67,7 +69,7 @@ export function CVListPage() {
 
   const handleViewCV = (cv: any) => {
     if (cv.public_url) {
-      window.open(cv.public_url, '_blank');
+      window.open(`/cv/public/${cv.public_url}`, '_blank');
     } else {
       setSelectedCvForLinks(cv);
       setShowEphemeralLinks(true);
@@ -81,6 +83,34 @@ export function CVListPage() {
 
   const handleWidgetCV = (cv: any) => {
     navigate(`/cvs/${cv.id}/widget`);
+  };
+
+  const handlePublishCV = async (cv: any) => {
+    try {
+      setIsPublishing(cv.id);
+      const updatedCV = await cvService.publishCV(cv.id);
+      
+      // Update the CV in the local state
+      setCVs(prevCVs => prevCVs.map(c => c.id === cv.id ? updatedCV : c));
+    } catch (error) {
+      console.error('Failed to publish CV:', error);
+    } finally {
+      setIsPublishing(null);
+    }
+  };
+
+  const handleUnpublishCV = async (cv: any) => {
+    try {
+      setIsUnpublishing(cv.id);
+      const updatedCV = await cvService.unpublishCV(cv.id);
+      
+      // Update the CV in the local state
+      setCVs(prevCVs => prevCVs.map(c => c.id === cv.id ? updatedCV : c));
+    } catch (error) {
+      console.error('Failed to unpublish CV:', error);
+    } finally {
+      setIsUnpublishing(null);
+    }
   };
 
   // Delete confirmation functions
@@ -165,6 +195,7 @@ export function CVListPage() {
             const totalViews = publicViews + recruiterViews;
             const downloads = cv.metadata?.downloadCount || cv.metadata?.downloads || 0;
             const shares = cv.metadata?.shareCount || cv.metadata?.shares || 0;
+            const isPublished = cv.status === 'published' && cv.is_public;
 
             return (
               <Card key={cv.id} className="hover:shadow-lg transition-shadow">
@@ -263,20 +294,61 @@ export function CVListPage() {
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
+
+                    {/* Publish/Unpublish Button */}
+                    {cv.status !== 'optimizing' && (
+                      <Button
+                        variant={isPublished ? "outline" : "primary"}
+                        size="sm"
+                        className={isPublished ? "border-green-300 text-green-700 hover:bg-green-50" : ""}
+                        onClick={() => isPublished ? handleUnpublishCV(cv) : handlePublishCV(cv)}
+                        disabled={isPublishing === cv.id || isUnpublishing === cv.id}
+                      >
+                        {isPublishing === cv.id ? (
+                          <>
+                            <div className="animate-spin h-4 w-4 mr-2 border-2 border-white border-t-transparent rounded-full"></div>
+                            Publishing...
+                          </>
+                        ) : isUnpublishing === cv.id ? (
+                          <>
+                            <div className="animate-spin h-4 w-4 mr-2 border-2 border-green-500 border-t-transparent rounded-full"></div>
+                            Unpublishing...
+                          </>
+                        ) : (
+                          <>
+                            <Globe className="h-4 w-4 mr-2" />
+                            {isPublished ? "Unpublish CV" : "Publish CV"}
+                          </>
+                        )}
+                      </Button>
+                    )}
                   </div>
                   
                   {cv.public_url && (
                     <div className="mt-3 p-2 bg-green-50 rounded-lg">
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
-                        <span className="text-xs text-green-700">Public CV</span>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="text-xs self-start sm:self-auto"
-                          onClick={() => navigator.clipboard.writeText(cv.public_url)}
-                        >
-                          Copy Link
-                        </Button>
+                        <span className="text-xs text-green-700 flex items-center">
+                          <Globe className="h-3 w-3 mr-1" />
+                          Public CV
+                        </span>
+                        <div className="flex items-center space-x-2">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-xs self-start sm:self-auto"
+                            onClick={() => navigator.clipboard.writeText(`${window.location.origin}/cv/public/${cv.public_url}`)}
+                          >
+                            Copy Link
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-xs"
+                            onClick={() => window.open(`/cv/public/${cv.public_url}`, '_blank')}
+                          >
+                            Open
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   )}
